@@ -11,7 +11,7 @@ import {
   composeHealth, driftDay, fatigueWarning, healthMult, recoveryState,
   rollSuddenDeath, suddenDeathP, suddenDeathRisk, tickHiddenFatigue, updateDecisionMode
 } from '../src/core/health';
-import { createProject, settleProjectsMonth, tickProjectsDay } from '../src/core/projects';
+import { createProject, settleProjectsDay, settleProjectsMonth, tickProjectsDay } from '../src/core/projects';
 import { installPatch, layerSlots, patchMult, tickPatchesDay } from '../src/core/os';
 import { livingCost, phaseMult, settleMonth, taxDue } from '../src/core/economy';
 import { PHASE_TRANSITIONS } from '../src/data/economy.def';
@@ -35,14 +35,20 @@ function setup(over: Partial<SetupConfig> = {}): SetupConfig {
 const fresh = (over: Partial<SetupConfig> = {}) => createInitialSlice(setup(over));
 
 describe('行动表完整性（约 30 条四类）', () => {
-  it('33 条行动：四类齐全、learn 三档、def 可查', () => {
-    expect(ACTION_DEFS.length).toBe(33);
+  it('38 条行动：四类齐全、learn 三档、def 可查、[v0.10] 饮食五连', () => {
+    expect(ACTION_DEFS.length).toBe(38); // [v0.10/W1] 33 + eatWell/cook/takeout/coffee/earlySleep
     for (const cat of ['input', 'output', 'biz', 'self'] as const) {
       expect(ACTION_DEFS.some(a => a.cat === cat)).toBe(true);
     }
     expect(ACTION_DEFS.filter(a => a.special === 'learn').map(a => a.tier).sort())
       .toEqual(['easy', 'fit', 'hard']);
     expect(findAction('deepLearnFit')?.domain).toBe('skill');
+    // [v0.10/W1] 健康饮食模块五连
+    expect(findAction('eatWell')?.effects[0]).toEqual({ k: 'diet', op: '+', v: 12 });
+    expect(findAction('cook')?.cash).toBe(12);
+    expect(findAction('takeout')?.ap).toBe(0);
+    expect(findAction('coffee')?.energy).toBe(-10);
+    expect(findAction('earlySleep')?.special).toBe('earlySleep');
   });
 
   it('项目类型 14 条（10 基础 + 4 autoSrv），中转站 gray', () => {
@@ -403,9 +409,9 @@ describe('项目引擎（§5.6）', () => {
     expect(res.moonThree).toEqual(['魔咒']);
   });
 
-  it('每日被动流：中断（停摆）时无被动入账', () => {
+  it('[v0.10] 项目日结 settleProjectsDay：mrr/30±6% 逐日入账；停摆 ×0.3；未发布无收入', () => {
     const s = fresh();
-    createProject(s, '停摆', 'saas', 'subscription', createRng(3));
+    createProject(s, '日结', 'saas', 'subscription', createRng(3));
     const p = s.projects[0];
     if (!p) throw new Error('project missing');
     p.stage = 'grow';
@@ -413,13 +419,28 @@ describe('项目引擎（§5.6）', () => {
     p.quality = 60;
     p.mrr = 3000;
     const c0 = s.cash;
-    tickProjectsDay(s, createRng(3));
+    settleProjectsDay(s, createRng(3));
     const flowNormal = s.cash - c0;
+    expect(flowNormal).toBeGreaterThan(3000 / 30 * 0.94 - 1e-6);
+    expect(flowNormal).toBeLessThan(3000 / 30 * 1.06 + 1e-6);
+    expect(p.todayFlow).toBeCloseTo(flowNormal, 6);
+    expect(s.dailyFlow.projIn).toBeCloseTo(flowNormal, 6);
+    // 停摆：×0.3 惩罚
     s.flags.interrupted = true;
     const c1 = s.cash;
+    settleProjectsDay(s, createRng(3));
+    const flowStop = s.cash - c1;
+    expect(flowStop).toBeGreaterThan(3000 / 30 * 0.3 * 0.94 - 1e-6);
+    expect(flowStop).toBeLessThan(3000 / 30 * 0.3 * 1.06 + 1e-6);
+    // 未发布（idea/validate/build）无收入，维护账仍在走
+    s.flags.interrupted = false;
+    p.stage = 'build';
+    p.mrr = 0;
+    const c2 = s.cash;
+    settleProjectsDay(s, createRng(3));
     tickProjectsDay(s, createRng(3));
-    expect(flowNormal).toBeGreaterThan(0);
-    expect(s.cash - c1).toBe(0);
+    expect(s.cash - c2).toBe(0);
+    expect(p.maintenance).toBeGreaterThan(0);
   });
 });
 
@@ -673,7 +694,7 @@ describe('结局与五维报告（§十二）', () => {
           if (p) p.pmfTrue = 90;
           break;
         }
-        case 'trueCalling': s.character = 85; s.morality = 80; s.stats.projectsDone = 2; break;
+        case 'trueCalling': s.character = 85; s.morality = 80; s.stats.projectsDone = 3; break; // [v0.10/体感复核] 2→3：日结后带用户退役不再稀缺
         case 'impactMany': s.influence = 80; s.stats.followersPeak = 100000; break;
         case 'secondLife': s.location = 'dali'; s.monthlyIncome = 9000; s.monthlyExpense = 7000; s.morality = 60; break; // [S9] 生活费 7000
         case 'saintOrHag': s.morality = 99; break; // [S9] 阈值 95→98

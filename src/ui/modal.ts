@@ -11,6 +11,7 @@ import { getGame, getRng } from './runtime';
 import { SFX } from './sfx';
 import { floatText } from './float';
 import { iconHtml, renderIcons } from './icons';
+import { interpolateEventVars } from './fmt';
 
 // ---------- 队列模型（纯逻辑） ----------
 
@@ -179,7 +180,7 @@ function renderEventModal(ev: EventDef, s: StateSlice): void {
     catTag.textContent = ev.cat;
     const p = document.createElement('p');
     p.className = 'ev-body-text';
-    p.textContent = ev.body;
+    p.textContent = interpolateEventVars(ev.body, s); // [v0.10/W8] {cash}/{followers} 等实时变量插值
     body.appendChild(catTag);
     body.appendChild(p);
   }

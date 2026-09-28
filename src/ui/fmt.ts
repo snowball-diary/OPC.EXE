@@ -1,10 +1,28 @@
 // S7 共享格式化与纯函数工具：数字统一 ¥ 千分位 / 日志颜色映射 / 特殊日志识别。
 // 全部纯函数（无 DOM），tests/s7.test.ts 直接覆盖。
-import type { LogEntry } from '../core/types';
+import type { LogEntry, StateSlice } from '../core/types';
 
 /** 千分位数字（与 S6 顶栏口径一致：en-US 分组） */
 export function numFmt(n: number): string {
   return Math.round(n).toLocaleString('en-US');
+}
+
+/**
+ * [v0.10/W8] 事件弹窗 body 变量插值（纯函数）：
+ * {cash} 现金 / {followers} 粉丝峰值 / {day} {month} 日期 / {runway} 跑道 /
+ * {energy} {stress} 身心读数 / {mrr} 在营项目 MRR 合计——叙事里嵌实时数字。
+ */
+export function interpolateEventVars(body: string, s: Readonly<StateSlice>): string {
+  const mrr = s.projects.filter(p => p.alive).reduce((a, p) => a + p.mrr, 0);
+  return body
+    .replace(/\{cash\}/g, `¥${numFmt(s.cash)}`)
+    .replace(/\{followers\}/g, numFmt(s.stats.followersPeak))
+    .replace(/\{day\}/g, String(s.meta.day))
+    .replace(/\{month\}/g, String(s.meta.month))
+    .replace(/\{runway\}/g, String(s.runway))
+    .replace(/\{energy\}/g, String(Math.round(s.energy)))
+    .replace(/\{stress\}/g, String(Math.round(s.stress)))
+    .replace(/\{mrr\}/g, `¥${numFmt(mrr)}`);
 }
 
 /** 金额：¥1,234；负数 -¥1,234 */

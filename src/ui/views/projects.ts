@@ -1,14 +1,15 @@
-// 项目视图（S7）：项目卡（阶段徽章/进度/PMF 估计±噪声/月收/用户/维护/风险）+ 新建项目
-// + 项目操作（开发/打磨/迭代/转型/退役）+ autoSrv/灰产的单位经济面板（unitEconomics）。
+// 项目视图（S7→[v0.10/W7] 经营看板）：项目卡（阶段徽章/进度/PMF 置信区间/今日流水/日增用户/
+// 维护负担条/生命周期 7 阶段时间轴）+ 新建项目 + 项目操作 + autoSrv/灰产的单位经济面板
+//（今日 Token 成本/今日毛利）+ 灰产清算风险累积条。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
 import { unitEconomics } from '../../core/agents';
-import type { Project, ProjectType, RevenueModelId, StateSlice } from '../../core/types';
+import type { Project, ProjectStage, ProjectType, RevenueModelId, StateSlice } from '../../core/types';
 import { PROJECT_TYPES, findProjectType } from '../../data/projects.def';
 import { pct, projectStageBadge, yuan } from '../fmt';
 import { iconHtml } from '../icons';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/s7.test.ts / s10 覆盖） ----------
 
 export const REVENUE_MODELS: readonly { id: RevenueModelId; label: string }[] = [
   { id: 'buyout', label: '买断' },
@@ -23,6 +24,48 @@ export const REVENUE_MODELS: readonly { id: RevenueModelId; label: string }[] = 
 
 export function revenueModelLabel(id: RevenueModelId): string {
   return REVENUE_MODELS.find(m => m.id === id)?.label ?? id;
+}
+
+/** [v0.10/W7] PMF 置信区间格式化（纯函数）：估计 ±噪声（区间下限-上限）；认知越高立项时噪声越窄 */
+export function pmfInterval(v: number, noise: number): string {
+  const lo = Math.max(0, Math.round(v - noise));
+  const hi = Math.min(100, Math.round(v + noise));
+  return `${Math.round(v)}±${Math.round(noise)}（${lo}-${hi}）`;
+}
+
+const STAGE_DOTS: readonly { stage: ProjectStage; label: string }[] = [
+  { stage: 'idea', label: '想法' },
+  { stage: 'validate', label: '验证' },
+  { stage: 'build', label: '开发' },
+  { stage: 'launch', label: '发布' },
+  { stage: 'grow', label: '增长' },
+  { stage: 'mature', label: '成熟' },
+  { stage: 'decline', label: '衰退' }
+];
+
+export type StageDotState = 'done' | 'current' | 'future';
+
+/** [v0.10/W7] 生命周期时间轴状态（纯函数）：当前阶段高亮，之前 done，之后 future */
+export function stageTimeline(stage: ProjectStage): { label: string; state: StageDotState }[] {
+  const cur = STAGE_DOTS.findIndex(d => d.stage === stage);
+  return STAGE_DOTS.map((d, i) => ({
+    label: d.label,
+    state: (i < cur ? 'done' : i === cur ? 'current' : 'future') as StageDotState
+  }));
+}
+
+/** [v0.10/W7] 灰产清算风险累积（纯函数）：ageMonths 与合规分共同决定，0-100 可视化 */
+export function grayRiskScore(p: Project, compliance: number): number {
+  if (!p.gray) return 0;
+  return Math.max(0, Math.min(100, Math.round(25 + p.ageMonths * 6 + (70 - compliance) * 0.8)));
+}
+
+/** [v0.10/W7] autoSrv 今日 Token 成本/毛利（纯函数）：今日流水 × Token 成本占比 */
+export function todayUnitEconomics(todayFlow: number, cogsToken: number, price: number, priceIndex: number): { tokenCost: number; gross: number } {
+  if (todayFlow <= 0 || price <= 0) return { tokenCost: 0, gross: 0 };
+  const tokenShare = Math.min(1, (cogsToken * priceIndex) / price);
+  const tokenCost = todayFlow * tokenShare;
+  return { tokenCost, gross: todayFlow - tokenCost };
 }
 
 /** 单位经济面板的 UI 数据映射（纯函数）：毛利率 → 色条档位 */
@@ -53,6 +96,14 @@ function projectCard(p: Project, s: StateSlice): string {
   const canPivot = p.alive;
   const ue = needsUnitEconomics(t) ? unitEconomics(s, p) : null;
   const band = ue ? marginBand(ue.grossMargin) : null;
+  // [v0.10/W7] 看板增量：今日流水 / 日增用户 / PMF 置信区间 / 时间轴 / 清算风险 / 今日单位经济
+  const todayFlow = p.todayFlow ?? 0;
+  const todayUsers = p.todayUsers ?? 0;
+  const timeline = stageTimeline(p.stage);
+  const grayRisk = grayRiskScore(p, s.compliance);
+  const tue = ue && ue.price > 0
+    ? todayUnitEconomics(todayFlow, ue.cogsToken, ue.price, ue.priceIndex)
+    : null;
   return `
     <div class="proj-card ${p.gray ? 'gray' : ''}${p.alive ? '' : ' dead'}">
       <div class="proj-head">
@@ -60,18 +111,27 @@ function projectCard(p: Project, s: StateSlice): string {
         <span class="badge ${st.cls}">${st.label}</span>
         <span class="dim-line">${t?.name ?? p.type} · ${revenueModelLabel(p.revenueModel)} · v${p.version}</span>
       </div>
+      <div class="stage-dots" title="生命周期：${timeline.map(d => d.label).join(' → ')}">
+        ${timeline.map(d => `<i class="${d.state}" title="${d.label}"></i>`).join('')}
+      </div>
       <div class="proj-rows">
         <div class="prow"><span>进度</span>${bar(p.progress)}<b>${pct(p.progress)}</b></div>
         <div class="prow"><span>质量</span>${bar(p.quality, 'cyan')}<b>${pct(p.quality)}</b></div>
-        <div class="prow"><span>PMF 估计</span>${bar(p.pmfEstimate.v, 'orange')}<b>${Math.round(p.pmfEstimate.v)}±${Math.round(p.pmfEstimate.noise)}</b></div>
-        <div class="prow"><span>维护欠账</span>${bar(p.maintenance, p.maintenance > 70 ? 'warn' : '')}<b>${pct(p.maintenance)}</b></div>
+        <div class="prow"><span>PMF 区间</span>${bar(p.pmfEstimate.v, 'orange')}<b>${pmfInterval(p.pmfEstimate.v, p.pmfEstimate.noise)}</b></div>
+        <div class="prow"><span>维护负担</span>${bar(p.maintenance, p.maintenance > 70 ? 'warn' : '')}<b>${pct(p.maintenance)}</b></div>
       </div>
       <div class="proj-stats">
+        <span>今日流水 <b class="${todayFlow > 0 ? 'c-green' : 'c-dim'}">${todayFlow > 0 ? `+${yuan(Math.round(todayFlow))}` : '¥0'}</b></span>
+        <span>日增用户 <b>${todayUsers > 0 ? `+${Math.max(1, Math.round(todayUsers))}` : '—'}</b></span>
         <span>月收 <b class="c-gold">${yuan(Math.round(p.mrr))}</b></span>
         <span>用户 <b>${Math.round(p.users)}</b></span>
         <span>风险 <b class="c-orange">${pct(p.risk)}</b></span>
-        <span>真实潜力 <i class="dim-line">未知（估计在收敛）</i></span>
       </div>
+      ${tue && (ue?.projectType ?? '') === p.type && todayFlow > 0 ? `
+      <div class="ue-rows dim-line" style="margin-top:2px">
+        <span>今日 Token 成本 <b class="c-red">-${yuan(Math.round(tue.tokenCost))}</b></span>
+        <span>今日毛利 <b class="${tue.gross >= 0 ? 'c-green' : 'c-red'}">${tue.gross >= 0 ? '+' : ''}${yuan(Math.round(tue.gross))}</b></span>
+      </div>` : ''}
       ${ue && band ? `
       <div class="ue-panel">
         <div class="ue-head">${iconHtml('coin', 'icon')}单位经济（Token 进货价口径）</div>
@@ -82,6 +142,11 @@ function projectCard(p: Project, s: StateSlice): string {
           <span>毛利率 <b class="c-${band.cls}">${pct(ue.grossMargin * 100)}（${band.label}）</b></span>
         </div>
         <div class="ue-note ${ue.overTrustCapacity ? 'c-red' : 'dim-line'}">${ue.overTrustCapacity ? '⚠ ' + ue.scaleCapNote : ue.scaleCapNote}</div>
+      </div>` : ''}
+      ${p.gray && p.alive ? `
+      <div class="gray-risk">
+        <div class="prow"><span>清算风险累积</span>${bar(grayRisk, grayRisk > 60 ? 'warn' : '')}<b class="${grayRisk > 60 ? 'c-red' : 'c-orange'}">${pct(grayRisk)}</b></div>
+        <div class="dim-line">灰产历史在稽查权重里滚存（ageMonths 与合规分共同决定）——短多长空，自己掂量。</div>
       </div>` : ''}
       ${p.alive ? `
       <div class="proj-btns">

@@ -6,7 +6,7 @@ import { findEnding } from '../../data/endings.def';
 import { yuan } from '../fmt';
 import { getGame, setGame } from '../runtime';
 import { getCtx as ctxOf } from '../registry';
-import { importJson, loadSlot, saveToSlot, type SlotId } from '../../save/save';
+import { importJson, isOfficialSave, loadSlot, saveToSlot, type SlotId } from '../../save/save';
 import { SFX } from '../sfx';
 import { enqueueNotice, processQueue } from '../modal';
 
@@ -134,7 +134,14 @@ export function renderSaveSection(el: HTMLElement): void {
     if (!file) return;
     try {
       const text = await file.text();
-      setLoaded(importJson(text));
+      const sv = importJson(text);
+      // [v0.10/W9] 溯源校验：非官方存档（缺 author/product 标记）警告后仍可载入
+      if (!isOfficialSave(sv)) {
+        SFX.alarm();
+        enqueueNotice('存档溯源', '这不是 OPC.exe 的官方存档（缺少作者溯源字段）——载入后果自负。', 'bad');
+      }
+      setLoaded(sv);
+      processQueue();
     } catch {
       SFX.bad();
       enqueueNotice('导入失败', '非法存档：schema 或校验和不对。', 'bad');

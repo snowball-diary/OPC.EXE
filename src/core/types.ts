@@ -93,6 +93,7 @@ export interface LifeStats {
   eventsSeen: number;
   patchesInstalled: number;
   agentsHired: number;
+  leads: number; // [v0.10/W4] 累计销售线索（growth 智能体周产 1-3 条，交付加成封顶 +15%）
   endingsSeen: string[];
 }
 
@@ -124,6 +125,8 @@ export interface Project {
   gray?: boolean; // 灰产项目（中转站等）：compliance 月度-3、稽查×2、grayHistory 永久记录
   lastMonthMrr?: number; // [S2+] 上月 MRR（decline 检测：连续 2 月增长<2%）
   stalledMonths?: number; // [S2+] 连续低增长月数
+  todayFlow?: number; // [v0.10/W2] 今日流水（settleProjectsDay 写入，日结）
+  todayUsers?: number; // [v0.10/W7] 今日新增用户（日折算收敛值）
 }
 
 export interface ProjectType {
@@ -154,11 +157,22 @@ export interface AgentDef {
   desc?: string;
 }
 
+/** [v0.10/W4] 智能体本周贡献（周日清零重算，agents Tab「本周贡献」） */
+export interface AgentWeekStats {
+  followers: number; // 涨粉
+  revenue: number; // 带来流水
+  apSaved: number; // 节省 AP（butler 返还等）
+  tickets: number; // 处理工单数（support）
+  content: number; // 自动产出内容篇数（content）
+  leads: number; // 销售线索（growth）
+}
+
 export interface AgentInstance {
   id: AgentId;
   hiredDay: number;
   usageScale: number; // 用量规模（业务量系数）
   trust: number; // 0-100；<40 效率减半
+  weekStats?: AgentWeekStats; // [v0.10] 缺省视为全零（旧档兼容）
 }
 
 // ---------- 平台 ----------
@@ -304,7 +318,8 @@ export type ActionSpecial =
   | 'taxEvade' | 'registerEntity' | 'trademark' | 'icpFiling'
   | 'outsource' | 'writeSop' | 'automationBuild' | 'bizCoop'
   | 'exercise' | 'meditate' | 'deepRest' | 'socialize' | 'travel' | 'medical'
-  | 'setPrice' | 'bookkeeping' | 'payTax'; // [S2+] 三档定价 / 自记账 / 报税
+  | 'setPrice' | 'bookkeeping' | 'payTax' // [S2+] 三档定价 / 自记账 / 报税
+  | 'earlySleep'; // [v0.10/W1] 22:30 早睡：立即结束今天（UI 消费 flags.earlySleptToday）
 
 export interface ActionDef {
   id: string;
@@ -325,6 +340,28 @@ export interface ActionDef {
 }
 
 // ---------- 状态切片 ----------
+
+/**
+ * [v0.10/W2] 今日现金流分项（日清零重算）：现金流每日可见，月底只做对账汇总。
+ * 顶栏现金 hover / 财务 Tab 首行显示「今日净流」= 流入合计 − 流出合计。
+ */
+export interface DailyFlow {
+  projIn: number; // 项目日流水（订阅/按量日折算，settleProjectsDay）
+  passiveIn: number; // 平台日变现 + 被动折算
+  serviceIn: number; // 交付 / 事件 / 智能体销售等发生时现金收入
+  livingOut: number; // 生活费日扣
+  subsOut: number; // 工具订阅日扣
+  tokenOut: number; // Token 每日扣现（W3）
+  otherOut: number; // 行动现金成本 / 税 / 杂项
+}
+
+/** [v0.10/W2] 投资盈亏记账：浮动市值每日累积，卖出才落袋（已实现单独统计） */
+export interface InvestGains {
+  realizedTotal: number; // 生涯累计已实现收益（卖出落袋）
+  realizedMonth: number; // 本月已实现（月报口径，月结清零）
+  floatToday: number; // 今日浮动盈亏（±）
+  floatMonth: number; // 本月浮动盈亏累计（±，月结清零）
+}
 
 export interface StateSlice {
   meta: {
@@ -369,10 +406,14 @@ export interface StateSlice {
   platforms: Record<PlatformId, PlatformAccount>;
   projects: Project[];
   agents: AgentInstance[];
-  autoLevel: number; // 0-100，≥85 幽灵公司
-  osRules: OSRuleState[];
-  tokenBill: { lastMonth: number; priceIndex: number };
-  portfolio: { cash: number; fund: number; bond: number; indexFund: number; stock: number; crypto: number; realEstate: number };
+    autoLevel: number; // 0-100，≥85 幽灵公司
+    osRules: OSRuleState[];
+    tokenBill: { yesterday: number; monthToDate: number; priceIndex: number }; // [v0.10/W3] Token 日结：昨日 / 本月累计 / 单价指数（旧档 lastMonth → monthToDate 迁移）
+    portfolio: { cash: number; fund: number; bond: number; indexFund: number; stock: number; crypto: number; realEstate: number };
+    portfolioCost: { cash: number; fund: number; bond: number; indexFund: number; stock: number; crypto: number; realEstate: number }; // [v0.10/W2] 持仓成本（卖出算已实现收益）
+    investGains: InvestGains; // [v0.10/W2] 已实现 / 浮动盈亏记账
+    dailyFlow: DailyFlow; // [v0.10/W2] 今日现金流分项（日清零）
+    lastMonthReport?: MonthReport; // [v0.10/W8] 上月月报（财务 Tab 环比箭头）
   debt: number;
   runway: number; // 月
   monthlyIncome: number;
@@ -526,6 +567,8 @@ export interface SaveGame {
   createdAt: number;
   game: SerializedState;
   checksum: number; // FNV-1a(game)
+  author?: string; // [v0.10/W9] 溯源："Lai Jiacheng (c) 2026"（旧档缺失不致命，导入时警告）
+  product?: string; // [v0.10/W9] "OPC.exe"
 }
 
 // ---------- [S2+] 引擎结果类型（纯增量，不破坏既有契约） ----------
@@ -556,12 +599,13 @@ export interface WeeklyReviewResult {
   candidates: BottleneckScore[];
 }
 
-/** 月结算报告（§6.3） */
+/** 月结算报告（§6.3；[v0.10] investRealized/investFloat 已实现与浮动分列） */
 export interface MonthReport {
   day: number;
   incomeProject: number;
   incomeService: number;
-  incomeInvest: number;
+  incomeInvest: number; // 已实现（卖出落袋）
+  investFloat: number; // [v0.10/W2] 本月浮动盈亏（未落袋）
   expenseLiving: number;
   expenseSubs: number;
   expenseUpkeep: number;

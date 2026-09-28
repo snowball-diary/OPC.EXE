@@ -75,33 +75,67 @@ export function createProject(
   return { ok: true, msg: `立项「${p.name}」`, project: p, floatTexts: [{ text: '立项', cls: 'gold' }] };
 }
 
-/** 项目日：被动收入按日折算（mrr×被动占比/30），维护欠账每日 +0.2；中断（停摆）时无被动流 */
+/** 项目日（维护账）：维护欠账每日 +0.2；收入侧见 settleProjectsDay（[v0.10] 日结） */
 export function tickProjectsDay(s: StateSlice, rng: Rng): void {
   void rng;
   for (const p of s.projects) {
     if (!p.alive) continue;
-    if (s.flags.interrupted !== true) {
-      const t = findProjectType(p.type);
-      const share = t?.passiveShare ?? 0;
-      const flow = (p.mrr * share) / 30; // 被动部分按日到账；非被动部分月结入账
-      if (flow > 0) {
-        s.cash += flow;
-        s.stats.totalRevenue += flow;
-        s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + flow;
-      }
-    }
     p.maintenance = clamp100(p.maintenance + 0.2);
   }
 }
 
+/**
+ * [v0.10/W2] 项目日结：在营且已发布（launch+）的项目每日入账 mrr/30（±6% 日波动 rng），
+ * 同时按日折算用户增长（月收敛 15% 的 1/30）。中断（停摆）时收入 ×0.3。
+ * 今日流水写 p.todayFlow（项目日报/经营看板用），累计进 flags.monthProjAcc（月底对账）。
+ */
+export function settleProjectsDay(s: StateSlice, rng: Rng): void {
+  for (const p of s.projects) {
+    p.todayFlow = 0;
+    p.todayUsers = 0;
+    if (!p.alive) continue;
+    const t = findProjectType(p.type);
+    if (!t) continue;
+    const earning = stageIdx(p.stage) >= 3; // launch 之后才有收入
+    if (!earning) continue;
+    // 日增用户：月度收敛 (target-users)×0.15 按日折算
+    const target = p.pmfTrue * 10 * (p.quality / 100);
+    if (target > p.users) {
+      const du = (target - p.users) * 0.15 / 30;
+      p.users += du;
+      p.todayUsers = du;
+    }
+    // 今日流水：mrr/30 ± 6% 日波动；停摆 ×0.3（停摆的 0.3 惩罚在对账时不回补）
+    const base = p.mrr / 30;
+    const interrupted = s.flags.interrupted === true;
+    const jitter = 1 + (rng.next() * 2 - 1) * 0.06;
+    const flow = interrupted ? base * 0.3 : base * jitter;
+    p.todayFlow = flow;
+    if (!interrupted) {
+      s.flags.monthProjDue = num(s.flags.monthProjDue) + base; // 应收（对账基准）
+      s.flags.monthProjNet = num(s.flags.monthProjNet) + flow; // 实收（非停摆日）
+    }
+    if (flow > 0) {
+      s.cash += flow;
+      s.stats.totalRevenue += flow;
+      s.dailyFlow.projIn += flow;
+      s.flags.monthProjAcc = num(s.flags.monthProjAcc) + flow;
+    }
+  }
+}
+
 export interface ProjectMonthResult {
-  income: number; // 本月 MRR 全额
+  income: number; // 本月应收（=结算时点各项目 MRR 合计，日结累计的对账基准）
   passiveIncome: number; // 被动部分（自由期判定）
   upkeep: number; // 月维护支出（已扣现金）
   moonThree: string[]; // 月三魔咒项目名
 }
 
-/** 项目月度结算：users 生长 → churn → mrr → 衰减/灰产合规/decline 检测/月三魔咒 */
+/**
+ * 项目月度结算（[v0.10] 对账版）：现金收入已逐日入账（settleProjectsDay），
+ * 此处做：日结累计 vs 月应收对账（差额修正）→ churn/用户/mrr 重算（下月日结基准）
+ * → 衰减/灰产合规/decline 检测/月三魔咒 → 月维护扣款。
+ */
 export function settleProjectsMonth(s: StateSlice, rng: Rng): ProjectMonthResult {
   let income = 0;
   let passiveIncome = 0;
@@ -126,19 +160,17 @@ export function settleProjectsMonth(s: StateSlice, rng: Rng): ProjectMonthResult
     }
     p.lastMonthMrr = p.mrr;
     if (earning) {
-      const churn = 0.05 + Math.max(0, 60 - p.quality) / 200 + p.maintenance / 400;
-      const target = p.pmfTrue * 10 * (p.quality / 100);
-      p.users = Math.max(0, p.users + (target - p.users) * 0.15 + (rng.next() * 2 - 1) * 2);
+      // [v0.10] churn：客服智能体在岗 −20%（butler 编排为其 40%）；用户增长已按日折算，此处只流失
+      const churnBase = 0.05 + Math.max(0, 60 - p.quality) / 200 + p.maintenance / 400;
+      const supportOn = s.agents.some(a => a.id === 'support');
+      const butlerOn = s.agents.some(a => a.id === 'butler');
+      const churn = churnBase * (1 - (supportOn ? 0.2 : 0) - (butlerOn ? 0.08 : 0));
+      p.users = Math.max(0, p.users * (1 - churn) + (rng.next() * 2 - 1) * 2);
       const price = (t.price[0] + t.price[1]) / 2;
       const gross = p.users * price * (p.quality / 100) * phaseMult(s.economyPhase);
-      p.mrr = Math.max(0, gross * (1 - churn));
-      let inc = p.mrr;
-      if (s.flags.interrupted === true) inc *= 0.3; // 项目停摆：收入×0.3
-      income += p.mrr;
+      p.mrr = Math.max(0, gross); // churn 已作用在 users 上（下月日结的新基准）
+      income += p.mrr; // 本月应收（对账基准；现金已在日结时入账）
       passiveIncome += p.mrr * t.passiveShare;
-      s.cash += inc;
-      s.stats.totalRevenue += inc;
-      s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + inc * (1 - t.passiveShare);
       if (p.stage === 'launch' && p.mrr > 0) p.stage = 'grow';
       if (p.stage === 'grow' && p.mrr >= 10000) p.stage = 'mature';
     } else {
@@ -156,7 +188,23 @@ export function settleProjectsMonth(s: StateSlice, rng: Rng): ProjectMonthResult
     upkeep += t.baseCost;
     s.cash -= t.baseCost;
   }
-  return { income, passiveIncome, upkeep, moonThree };
+  // ---- 月底对账：非停摆日实收 vs 应收，差额做日波动修正（±6% 抖动的均值回归；停摆 0.3 惩罚不回补） ----
+  const acc = num(s.flags.monthProjAcc);
+  const due = num(s.flags.monthProjDue);
+  const net = num(s.flags.monthProjNet);
+  const correction = Math.round(due - net);
+  if (Math.abs(correction) > 0) {
+    s.cash += correction;
+    s.stats.totalRevenue += correction;
+    s.dailyFlow.projIn += correction;
+  }
+  if (due > 0 && Math.abs(correction) > due * 0.01) {
+    pushLog(s, `【月结对账】项目流水日结累计 ¥${Math.round(net)}，应收 ¥${Math.round(due)}，修正 ${correction >= 0 ? '+' : ''}¥${correction}（日波动均值回归）。`, 'sys');
+  }
+  s.flags.monthProjAcc = 0;
+  s.flags.monthProjDue = 0;
+  s.flags.monthProjNet = 0;
+  return { income: acc + correction, passiveIncome, upkeep, moonThree };
 }
 
 /** pivot：保留 quality 60% / pmfEstimate 50% / progress 30%，换类型重来 */

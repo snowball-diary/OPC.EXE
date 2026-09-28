@@ -96,6 +96,12 @@ function register(el: HTMLElement, ctx: UiCtx): void {
       <div class="stat-grid">
         ${statSummary(s).map(r => `<div class="kv"><span>${r.label}</span><b>${r.value}</b></div>`).join('')}
       </div>
+      <div class="panel-title">// 关于作者</div>
+      <div class="about-author px-frame">
+        <p><b>赖嘉诚</b> · <a href="https://laijiacheng.com" target="_blank" rel="noopener">laijiacheng.com</a></p>
+        <p>本游戏全代码像素、零素材、200+ 项测试——一个人做的游戏，讲一个人做公司这件事。</p>
+        <p class="dim-line">OPC.exe © 2026 Lai Jiacheng · 存档内嵌溯源字段，非官方档导入会有提示。</p>
+      </div>
     </div>`;
 
   el.querySelectorAll<HTMLButtonElement>('button[data-kp]').forEach(b => {

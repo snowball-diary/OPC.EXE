@@ -29,7 +29,34 @@ export function fnv1a(str: string): number {
 
 export function serialize(s: StateSlice): SaveGame {
   const game: SerializedState = JSON.stringify(s);
-  return { schemaVersion: SAVE_SCHEMA_VERSION, createdAt: Date.now(), game, checksum: fnv1a(game) };
+  return {
+    schemaVersion: SAVE_SCHEMA_VERSION, createdAt: Date.now(), game, checksum: fnv1a(game),
+    author: AUTHOR_TAG, product: PRODUCT_TAG // [v0.10/W9] 溯源字段
+  };
+}
+
+/** [v0.10/W9] 存档溯源标记 */
+export const AUTHOR_TAG = 'Lai Jiacheng (c) 2026';
+export const PRODUCT_TAG = 'OPC.exe';
+
+/** [v0.10/W9] 官方存档判定：author/product 溯源字段齐全（旧版/第三方档缺失 → 导入时警告） */
+export function isOfficialSave(sv: SaveGame | null | undefined): boolean {
+  return !!sv && sv.author === AUTHOR_TAG && sv.product === PRODUCT_TAG;
+}
+
+/**
+ * [v0.10/W5] 继续经营可用性（纯函数）：有档 **且** 未终局才可用。
+ * 终局档（meta.over）→ 不可继续（上一段人生已落幕）；主动结局回头后 over=false 恢复可用。
+ */
+export function canContinueFromSlot(sv: SaveGame | null): { ok: boolean; reason: string } {
+  if (!sv) return { ok: false, reason: '没有自动存档' };
+  try {
+    const s = JSON.parse(sv.game) as { meta?: { over?: boolean } };
+    if (s.meta?.over === true) return { ok: false, reason: '上一段人生已落幕——开一家新公司吧' };
+    return { ok: true, reason: '' };
+  } catch {
+    return { ok: false, reason: '存档损坏（校验未过）' };
+  }
 }
 
 /** 校验失败一律拒绝（导入时调用方 catch） */
@@ -104,6 +131,16 @@ export function loadSlot(slot: SlotId): SaveGame | null {
     }
   }
   return memory.get(slot) ?? null;
+}
+
+/** [v0.10/W5] 清槽：终局型结局落幕后清除 auto 槽（storage + 内存降级双清） */
+export function clearSlot(slot: SlotId): void {
+  try {
+    globalThis.localStorage?.removeItem(KEY_PREFIX + slot);
+  } catch {
+    degraded = true;
+  }
+  memory.delete(slot);
 }
 
 export function listSlots(): { slot: SlotId; save: SaveGame | null; degraded: boolean }[] {

@@ -61,7 +61,10 @@ function register(el: HTMLElement, ctx: UiCtx): void {
         <div class="kv-grid">
           <div class="kv"><span>经济周期</span><b>${phaseNote(s.economyPhase)}</b></div>
           <div class="kv"><span>现金（活期）</span><b class="c-gold">${yuan(Math.round(s.cash))}</b></div>
-          <div class="kv"><span>组合总值</span><b>${yuan(cells.reduce((a, c) => a + c.value, 0))}</b></div>
+          <div class="kv"><span>持仓市值</span><b>${yuan(cells.reduce((a, c) => a + c.value, 0))}（成本 ${yuan(Object.values(s.portfolioCost).reduce((a, b) => a + b, 0))}）</b></div>
+          <div class="kv"><span>今日盈亏（浮动）</span><b class="${s.investGains.floatToday >= 0 ? 'c-green' : 'c-red'}">${s.investGains.floatToday >= 0 ? '+' : ''}${yuan(Math.round(s.investGains.floatToday))}</b></div>
+          <div class="kv"><span>本月浮动</span><b class="${s.investGains.floatMonth >= 0 ? 'c-green' : 'c-red'}">${s.investGains.floatMonth >= 0 ? '+' : ''}${yuan(Math.round(s.investGains.floatMonth))}</b></div>
+          <div class="kv"><span>已实现（落袋）</span><b class="${s.investGains.realizedTotal >= 0 ? 'c-gold' : 'c-red'}">${s.investGains.realizedTotal >= 0 ? '+' : ''}${yuan(Math.round(s.investGains.realizedTotal))}（本月 ${s.investGains.realizedMonth >= 0 ? '+' : ''}${yuan(Math.round(s.investGains.realizedMonth))}）</b></div>
           <div class="kv"><span>加密资产</span><b class="${cryptoOff ? 'c-dim' : 'c-purple'}">${cryptoOff ? '已关闭' : '开启'}</b></div>
         </div>
         <button class="px-btn ${cryptoOff ? '' : 'purple'}" id="btn-crypto">${cryptoOff ? '开启加密资产' : '关闭加密资产'}</button>
@@ -91,7 +94,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
         <button class="px-btn" id="tv-funding">借款（本息 ×1.05，需信用≥400）</button>
         <button class="px-btn" id="tv-insurance">投保（部分事故兜底）</button>
       </div>
-      <p class="s7-hint">收益按月结算（经济相位波动；加密标准差 ×6，心脏也是成本）。资产收益是唯一不耗 AP 的现金流——也是唯一会半夜跳水的那种。</p>
+      <p class="s7-hint">[v0.10] 市值每日按波动率重估（货基 0.01%/日、债 0.03%、指数 0.08%、个股 0.35%、加密 2.2%、房产 0.02%+月租日折算）——浮动盈亏只记账，<b>卖出才落袋为现金</b>。加密心脏也是成本。</p>
     </div>`;
 
   el.querySelector<HTMLButtonElement>('#btn-crypto')?.addEventListener('click', () => {

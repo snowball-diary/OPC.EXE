@@ -1,11 +1,12 @@
-// 智能体视图（S7，stage≥3 由 Tab 门控）：7 智能体卡（部署费/月 Token/效率/解锁/在岗+trust 条）
-// + Token 账单面板（上月账单/价格指数档位/事件预告）+ 幽灵公司进度（autoLevel/六流程覆盖/空虚提示）。
+// 智能体视图（S7，stage≥3 由 Tab 门控）：7 智能体卡（部署费/月 Token/效率/解锁/在岗+trust 条
+// + [v0.10/W4] 本周贡献 weekStats）+ Token 账单面板（[v0.10/W3] 昨日/本月累计/单价指数日结口径）
+// + 幽灵公司进度（autoLevel/六流程覆盖/空虚提示）。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
-import { AUTO_FLOWS, autoLevelScore, flowCoverage } from '../../core/agents';
-import type { AgentId, StateSlice } from '../../core/types';
+import { AUTO_FLOWS, autoLevelScore, flowCoverage, weekStatsOf } from '../../core/agents';
+import type { AgentId, AgentWeekStats, StateSlice } from '../../core/types';
 import { AGENT_DEFS } from '../../data/agents.def';
-import { barHtml, yuan } from '../fmt';
+import { barHtml, numFmt, yuan } from '../fmt';
 
 // ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
 
@@ -19,6 +20,19 @@ export function priceIndexLabel(pi: number): { label: string; cls: string; tease
   if (pi < 1.2) return { label: `×${pi.toFixed(1)} 基线`, cls: '', teaser: '算力价格平稳：账单按表走。' };
   if (pi < 1.8) return { label: `×${pi.toFixed(1)} 涨价`, cls: 'orange', teaser: '涨价潮：毛利率被压缩，重算单位经济再扩量。' };
   return { label: `×${pi.toFixed(1)} 限流溢价`, cls: 'red', teaser: '限流溢价：Token 变成奢侈品，烧钱的自动化先停一停。' };
+}
+
+/** [v0.10/W4] 本周贡献文案（纯函数）：weekStats → 一行可读摘要 */
+export function weekContribText(ws: AgentWeekStats | undefined): string {
+  if (!ws) return '本周贡献：还没开工';
+  const parts: string[] = [];
+  if (ws.followers > 0) parts.push(`涨粉 +${numFmt(ws.followers)}`);
+  if (ws.revenue > 0) parts.push(`流水 +¥${numFmt(ws.revenue)}`);
+  if (ws.tickets > 0) parts.push(`工单 ${numFmt(ws.tickets)}`);
+  if (ws.content > 0) parts.push(`内容 ${ws.content} 篇`);
+  if (ws.leads > 0) parts.push(`线索 ${ws.leads} 条`);
+  if (ws.apSaved > 0) parts.push(`省 AP ${ws.apSaved}`);
+  return parts.length > 0 ? `本周贡献：${parts.join(' · ')}` : '本周贡献：还没开工';
 }
 
 /** 幽灵公司面板模型（纯函数） */
@@ -41,6 +55,7 @@ function agentCard(def: (typeof AGENT_DEFS)[number], s: StateSlice): string {
   const inst = s.agents.find(a => a.id === def.id);
   const locked = s.meta.stage < def.unlockStage;
   const risk = def.id === 'butler' ? '风险聚合（全部）' : def.riskEvents.length + ' 项风险事件';
+  const contrib = inst ? weekContribText(weekStatsOf(inst)) : '';
   return `
     <div class="agent-card ${inst ? 'on' : ''}${locked ? ' locked' : ''}">
       <div class="agent-head"><b>${def.name}</b>${inst ? '<span class="badge green">在岗</span>' : locked ? `<span class="badge">v${def.unlockStage}.0 解锁</span>` : '<span class="badge cyan">可雇佣</span>'}</div>
@@ -54,6 +69,7 @@ function agentCard(def: (typeof AGENT_DEFS)[number], s: StateSlice): string {
       ${inst ? `
         <div class="trust-line">trust ${Math.round(inst.trust)}/100（&lt;40 效率减半）· 用量 ×${inst.usageScale.toFixed(1)} / 承载 ${Math.max(1, inst.trust / 20).toFixed(1)}</div>
         ${barHtml(inst.trust, inst.trust < 40 ? 'warn' : 'green')}
+        <div class="week-contrib">${contrib}</div>
         <div class="agent-btns"><button class="px-btn red" data-fire="${def.id}">停用（计费停止）</button></div>`
       : `<div class="agent-btns">
           <button class="px-btn gold" data-hire="${def.id}" ${locked ? `disabled title="需 OS 阶段 ${def.unlockStage}"` : ''}>雇佣</button>
@@ -64,15 +80,17 @@ function agentCard(def: (typeof AGENT_DEFS)[number], s: StateSlice): string {
 function tokenPanelHtml(s: StateSlice): string {
   const pi = priceIndexLabel(s.tokenBill.priceIndex);
   return `
-    <div class="panel-title">// Token 账单</div>
+    <div class="panel-title">// Token 账单（[v0.10] 日结口径）</div>
     <div class="token-panel">
       <div class="kv-grid">
-        <div class="kv"><span>上月账单</span><b class="c-gold">${yuan(Math.round(s.tokenBill.lastMonth))}</b></div>
-        <div class="kv"><span>价格指数</span><b class="c-${pi.cls}">${pi.label}</b></div>
-        <div class="kv"><span>本月已烧</span><b>${yuan(Math.round(s.stats.tokenSpent))}（生涯累计）</b></div>
+        <div class="kv"><span>昨日 Token</span><b class="c-gold">${yuan(Math.round(s.tokenBill.yesterday))}</b></div>
+        <div class="kv"><span>本月累计</span><b class="c-gold">${yuan(Math.round(s.tokenBill.monthToDate))}</b></div>
+        <div class="kv"><span>单价指数</span><b class="c-${pi.cls}">${pi.label}</b></div>
+        <div class="kv"><span>生涯累计</span><b>${yuan(Math.round(s.stats.tokenSpent))}</b></div>
         <div class="kv"><span>在岗智能体</span><b>${s.agents.length} / 7</b></div>
+        <div class="kv"><span>销售线索池</span><b>${numFmt(s.stats.leads)} 条（交付 +${Math.round(Math.min(0.15, s.stats.leads * 0.01) * 100)}%）</b></div>
       </div>
-      <p class="s7-hint">预告：${pi.teaser} 账单月底刚性扣除，零收入也照扣——先算单位经济，再谈规模。</p>
+      <p class="s7-hint">预告：${pi.teaser} 账单按日扣现（月账单/30），零收入也照扣——先算单位经济，再谈规模。</p>
     </div>`;
 }
 

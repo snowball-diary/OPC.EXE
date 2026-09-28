@@ -145,6 +145,12 @@ export function resolveChoice(s: StateSlice, ev: EventDef, choiceIdx: number, rn
     s.pending.chains.push({ event: seed.event, delayDays: Math.max(0, seed.delayDays), ifCond: seed.ifCond });
   }
   resolveEvent(s, ev.id);
+  // [v0.10/W8] 修复「周焦点事件选了不生效」：choice.id → s.focus 真正落地（此前只给小 buff）
+  if (ev.id === 'weekly-focus') {
+    if (choice.id === 'focus-health') s.focus = 'health';
+    else if (choice.id === 'focus-cash') s.focus = 'cash';
+    else if (choice.id === 'no-focus') s.focus = null;
+  }
   let ending: string | undefined;
   if (choice.id.startsWith('ending:')) {
     ending = choice.id.slice('ending:'.length);

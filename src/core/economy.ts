@@ -1,16 +1,25 @@
-// 经济引擎：生活成本 / 经济周期 / 税费 / 月度结算 / 金融 dispatch（技术文档 §6.3/§6.4，设计 §六）
+// 经济引擎：生活成本 / 经济周期 / 税费 / 日结金融 / 月度对账 / 金融 dispatch（技术文档 §6.3/§6.4，设计 §六）
+// [v0.10/W2] 现金流每日可见，月底只做对账汇总：投资按日浮动记账（tickPortfolioDay），
+// 卖出才落袋（applyInvest 已实现收益单独统计）；Token 已改日扣（agents.ts），月报只汇总。
 import { findDifficulty } from '../data/openings.def';
 import { findLocation } from '../data/locations.def';
 import { findPatch } from '../data/patches.def';
 import {
-  AI_SUB, ASSET_RET, BOOKKEEPING_FEE, LIVING_BASE, PHASE_ORDER_MULT, PHASE_TRANSITIONS, SUB_BASE
+  AI_SUB, ASSET_DAILY_VOL, ASSET_RET, BOOKKEEPING_FEE, LIVING_BASE, PHASE_ORDER_MULT, PHASE_TRANSITIONS, SUB_BASE
 } from '../data/economy.def';
 import type { Rng } from './rng';
 import type {
-  Action, ActionResult, EconomyPhase, MonthReport, StateSlice
+  Action, ActionResult, DailyFlow, EconomyPhase, MonthReport, StateSlice
 } from './types';
 
 export const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
+
+// ---------- [v0.10/W2] 今日净流 ----------
+
+/** 今日净流（纯函数）：流入合计 − 流出合计（顶栏 hover / 财务 Tab 首行） */
+export function dailyNet(df: DailyFlow): number {
+  return df.projIn + df.passiveIn + df.serviceIn - df.livingOut - df.subsOut - df.tokenOut - df.otherOut;
+}
 
 // ---------- 生活成本 ----------
 
@@ -69,24 +78,31 @@ export function taxDue(s: StateSlice, profit: number): { tax: number; rate: numb
   return { tax: Math.round(profit * 0.05), rate: 0.05, gray: false }; // 一人有限公司小微优惠
 }
 
-// ---------- 金融投资 ----------
+// ---------- 金融投资（[v0.10/W2] 日浮动市值，卖出落袋） ----------
 
-/** 月度资产收益结算（按相位波动，crypto 高波动；就地改 portfolio，返回收益额） */
-export function portfolioReturn(s: StateSlice, rng: Rng): number {
+/**
+ * 日度市值浮动：各资产按「月期望/30 漂移 + 日波动率」重估市值（活期无波动）。
+ * 只累积浮动盈亏（investGains.floatToday/floatMonth），不动现金——卖出才落袋。
+ */
+export function tickPortfolioDay(s: StateSlice, rng: Rng): number {
   let gain = 0;
+  s.investGains.floatToday = 0;
   for (const k of Object.keys(ASSET_RET) as (keyof typeof ASSET_RET)[]) {
     const v = s.portfolio[k];
     if (v <= 0) continue;
-    const ret = ASSET_RET[k];
-    const r = ret[0] + (rng.next() * 2 - 1) * ret[1];
+    const drift = ASSET_RET[k][0] / 30; // 月期望折日漂移
+    const r = drift + (rng.next() * 2 - 1) * ASSET_DAILY_VOL[k];
     const g = v * r;
-    s.portfolio[k] = Math.max(0, Math.round(v + g));
+    s.portfolio[k] = Math.max(0, v + g); // 市值（clampAll 收口取整）
     gain += g;
   }
+  s.investGains.floatToday = gain;
+  s.investGains.floatMonth += gain;
   return gain;
 }
 
-/** invest dispatch：买/卖（amount<0 = 卖出）/还款/借款/投保（简化为金额转移+份额记账） */
+/** invest dispatch：买/卖（amount<0 = 卖出）/还款/借款/投保。
+ *  [v0.10] 卖出按市值落袋，同时结转已实现收益 = 卖出市值 − 对应成本份额。 */
 export function applyInvest(s: StateSlice, a: Extract<Action, { t: 'invest' }>): ActionResult {
   if (s.meta.over) return { ok: false, msg: '生涯已结束' };
   const amt = Math.round(a.amount);
@@ -120,6 +136,7 @@ export function applyInvest(s: StateSlice, a: Extract<Action, { t: 'invest' }>):
     if (s.cash < amt) return { ok: false, msg: '现金不足' };
     s.cash -= amt;
     s.portfolio[k] += amt;
+    if (k !== 'cash') s.portfolioCost[k] += amt; // 成本随买入门
     return done(`买入 ${a.kind} ¥${amt}`);
   }
   if (amt < 0) {
@@ -127,6 +144,14 @@ export function applyInvest(s: StateSlice, a: Extract<Action, { t: 'invest' }>):
     if (s.portfolio[k] < sell) return { ok: false, msg: '持仓不足' };
     s.portfolio[k] -= sell;
     s.cash += sell;
+    if (k !== 'cash') {
+      const costShare = Math.min(s.portfolioCost[k], s.portfolioCost[k] * (sell / Math.max(1e-9, s.portfolio[k] + sell)));
+      s.portfolioCost[k] -= costShare;
+      const realized = sell - costShare; // 市值落袋 − 成本份额（可为负）
+      s.investGains.realizedTotal += realized;
+      s.investGains.realizedMonth += realized;
+      return done(`卖出 ${a.kind} ¥${Math.round(sell)}（落袋盈亏 ${realized >= 0 ? '+' : ''}${Math.round(realized)}）`);
+    }
     return done(`卖出 ${a.kind} ¥${sell}`);
   }
   return { ok: false, msg: '金额无效' };
@@ -135,29 +160,30 @@ export function applyInvest(s: StateSlice, a: Extract<Action, { t: 'invest' }>):
 // ---------- 月结算 ----------
 
 export interface MonthSettleInput {
-  projectIncome: number; // 项目 MRR 全额（含被动部分，settleProjectsMonth 已入现金）
+  projectIncome: number; // 项目月流水（settleProjectsDay 日结累计 + 对账修正；现金已逐日入账）
   projectUpkeep: number; // 项目月维护（settleProjectsMonth 已入现金扣减，此处只计报表）
   passiveIncome: number; // 被动部分（自由期判定 stage5 用）
   moonThree: string[]; // 月三魔咒项目名
 }
 
 /**
- * 月度结算：损益聚合 → 税费 → 订阅/代账/OS upkeep/Token 账单 → 信用分 → runway。
- * 项目收入与交付收入已在发生时入 cash；此处只扣月度性支出并生成损益报表。
+ * 月度结算（[v0.10] 对账版）：现金流已逐日入账（项目日结/Token 日扣/投资浮动），
+ * 此处只做损益聚合 → 税费 → 代账/OS upkeep/项目维护 → 信用分 → runway → 月报归档。
  */
 export function settleMonth(s: StateSlice, rng: Rng, proj: MonthSettleInput): MonthReport {
   const phaseBefore = s.economyPhase;
   const incomeProject = proj.projectIncome;
-  const incomeService = num(s.flags.monthRevenueAcc); // 交付现金 + 每日被动流（发生时已入账）
-  const investGain = portfolioReturn(s, rng);
-  const totalIncome = incomeProject + incomeService + Math.max(0, investGain);
+  const incomeService = num(s.flags.monthRevenueAcc); // 交付现金 + 平台日变现（发生时已入账）
+  const investRealized = s.investGains.realizedMonth; // 已实现（卖出落袋，现金已在卖出时入账）
+  const investFloat = s.investGains.floatMonth; // 本月浮动（未落袋，报表单列）
+  const totalIncome = incomeProject + incomeService + Math.max(0, investRealized);
 
   const dailySpent = num(s.flags.monthExpenseAcc); // 每日生活费+订阅（发生时已入账扣减）
   const fee = bookkeepingFee(s);
   const upkeep = s.osRules.reduce((a, r) => a + (findPatch(r.id)?.upkeep ?? 0), 0);
-  const token = s.tokenBill.lastMonth;
-  const monthlyCharges = fee + upkeep + token + proj.projectUpkeep; // 此刻统一扣
-  const totalExpense = dailySpent + monthlyCharges;
+  const token = s.tokenBill.monthToDate; // [v0.10/W3] 已逐日扣现，此处只报表汇总
+  const monthlyCharges = fee + upkeep + proj.projectUpkeep; // 此刻统一扣（Token 不再月扣）
+  const totalExpense = dailySpent + token + monthlyCharges;
   const profit = totalIncome - totalExpense;
 
   const { tax, gray } = taxDue(s, profit);
@@ -165,8 +191,7 @@ export function settleMonth(s: StateSlice, rng: Rng, proj: MonthSettleInput): Mo
   s.flags.grayTaxMonth = gray;
   if (gray) s.compliance = Math.max(0, s.compliance - 2);
 
-  s.stats.totalExpense += Math.round(totalExpense);
-  s.stats.taxesPaid += tax;
+  s.stats.totalExpense += Math.round(monthlyCharges + tax); // 生活费/订阅/Token 已在日结时计入
 
   // 信用分：正常纳税+2 / 逾期-30 / 合规+1 月
   if (tax > 0) {
@@ -183,22 +208,25 @@ export function settleMonth(s: StateSlice, rng: Rng, proj: MonthSettleInput): Mo
 
   s.monthlyIncome = Math.round(totalIncome);
   s.runway = Math.min(99, Math.round((Math.max(0, s.cash) / Math.max(1, totalExpense)) * 10) / 10);
-  s.tokenBill.lastMonth = 0;
+  s.tokenBill.monthToDate = 0; // 月度汇总行已生成，累计清零（对账日志由 time.ts 输出）
+  s.investGains.realizedMonth = 0;
+  s.investGains.floatMonth = 0;
   s.flags.lastPassiveIncome = proj.passiveIncome;
   s.flags.monthRevenueAcc = 0;
   s.flags.monthExpenseAcc = 0;
   s.stats.maxCash = Math.max(s.stats.maxCash, Math.round(s.cash));
   s.stats.maxRunway = Math.max(s.stats.maxRunway, s.runway);
 
-  return {
+  const report: MonthReport = {
     day: s.meta.day,
     incomeProject: Math.round(incomeProject),
     incomeService: Math.round(incomeService),
-    incomeInvest: Math.round(investGain),
+    incomeInvest: Math.round(investRealized),
+    investFloat: Math.round(investFloat),
     expenseLiving: Math.round(dailySpent),
     expenseSubs: monthlySubs(s),
     expenseUpkeep: upkeep,
-    expenseToken: token,
+    expenseToken: Math.round(token),
     expenseProject: Math.round(proj.projectUpkeep),
     tax,
     profit: Math.round(profit),
@@ -206,4 +234,6 @@ export function settleMonth(s: StateSlice, rng: Rng, proj: MonthSettleInput): Mo
     phaseAfter,
     moonThree: proj.moonThree
   };
+  s.lastMonthReport = report; // [v0.10/W8] 财务 Tab 环比箭头数据源
+  return report;
 }

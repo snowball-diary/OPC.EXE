@@ -2,14 +2,17 @@
 //
 // 职责：
 //   hireAgent/fireAgent       部署与停用（钱够+阶段够+未雇佣；trust=60 起步；停用即停止计费）
-//   tickAgentsDay             ①替代域自动执行 ②trust 月度结算 ③超承载质量惩罚
-//                             ④月度事故掷骰（riskEvents 入 pending 队列）⑤幽灵公司与"意义的空虚"
+//   tickAgentsDay             ①替代域自动执行（[v0.10/W4] 每日工作日志 purple + weekStats 本周贡献）
+//                             ②Token 日结扣现（[v0.10/W3] 当日用量×priceIndex，月底只汇总对账）
+//                             ③trust 月度结算 ④超承载质量惩罚 ⑤月度事故掷骰 ⑥幽灵公司与"意义的空虚"
 //   monthlyTokenBill          §8.2 月账单 = Σ(base + perUnit×units×usageScale)×priceIndex（butler 编排抽成 10%）
+//   dailyTokenBill            [v0.10/W3] 月账单 / 30：每日扣现口径
+//   agentBizMult              [v0.10/W4] 业务加成查询（deliver 收入/注册成本等，挂 AgentInstance 生效）
 //   autoLevelScore            §8.4 六关键流程接管度（获客/内容/客服/销售/财务合规/交付）→ autoLevel
 //   unitEconomics             §8.2 单位经济面板（毛利率/承载警戒），UI S7 直接读
 //
-// 计费扣款点：time.ts 月结块写 s.tokenBill.lastMonth = monthlyTokenBill(s,rng)，
-// economy.settleMonth 读它统一扣款并清零——链路 S2 已接好，本模块只负责算准。
+// 计费扣款点：[v0.10/W3] tickAgentsDay 每日扣现（tokenBill.yesterday/monthToDate 记账），
+// 月底 settleMonth 只做汇总行，不再一次性大额扣款。
 import { findAgent } from '../data/agents.def';
 import { findProjectType } from '../data/projects.def';
 import { findLocation } from '../data/locations.def';
@@ -19,10 +22,41 @@ import { ensureAccount, publishContent } from './platforms';
 import { grantKp, pushLog } from './state';
 import type { Rng } from './rng';
 import type {
-  ActionResult, AgentId, AgentInstance, Project, StateSlice, UnitEconomicsPanel
+  ActionResult, AgentId, AgentInstance, AgentWeekStats, Project, StateSlice, UnitEconomicsPanel
 } from './types';
 
 const clamp01 = (n: number): number => Math.max(0, Math.min(100, n));
+
+// ---------- [v0.10/W4] weekStats 工具 ----------
+
+export function weekStatsOf(a: AgentInstance): AgentWeekStats {
+  if (!a.weekStats) a.weekStats = { followers: 0, revenue: 0, apSaved: 0, tickets: 0, content: 0, leads: 0 };
+  return a.weekStats;
+}
+
+/** 周日清零重算（time.ts 周结算块调用；新周第一天重建） */
+export function resetAgentWeekStats(s: StateSlice): void {
+  for (const a of s.agents) a.weekStats = { followers: 0, revenue: 0, apSaved: 0, tickets: 0, content: 0, leads: 0 };
+}
+
+/** [v0.10/W4] 业务加成查询：雇佣即生效、解雇即失效（butler=其他智能体效果的 40%） */
+export interface AgentBizMult {
+  deliverIncome: number; // deliverService/谈单收入乘子（sales +15%，butler +6%）
+  registerCost: number; // 注册类行动现金成本乘子（regagent −30%，butler −12%）
+  leadBonus: number; // 交付接单加成（growth 线索：min(+15%, 线索×1%)）
+  churnMult: number; // 项目月 churn 乘子（support −20%，butler −8%）——settleProjectsMonth 消费
+}
+
+export function agentBizMult(s: StateSlice): AgentBizMult {
+  const has = (id: AgentId): boolean => s.agents.some(a => a.id === id);
+  const butler = has('butler');
+  return {
+    deliverIncome: 1 + (has('sales') ? 0.15 : 0) + (butler ? 0.06 : 0),
+    registerCost: 1 - (has('regagent') ? 0.3 : 0) - (butler ? 0.12 : 0),
+    leadBonus: Math.min(0.15, (s.stats.leads ?? 0) * 0.01),
+    churnMult: 1 - (has('support') ? 0.2 : 0) - (butler ? 0.08 : 0)
+  };
+}
 
 /** 各智能体月度基础事故概率（用量与低 trust 放大；§8.1 风险列的引擎化） */
 export const AGENT_RISK_MONTHLY: Record<AgentId, number> = {
@@ -88,10 +122,10 @@ export function hireAgent(s: StateSlice, id: AgentId, rng: Rng): ActionResult {
   }
   if (s.cash < def.deployCost) return { ok: false, msg: `部署费不足（需 ¥${def.deployCost}）` };
   s.cash -= def.deployCost;
-  s.agents.push({ id, hiredDay: s.meta.day, usageScale: 1, trust: 60 });
+  s.agents.push({ id, hiredDay: s.meta.day, usageScale: 1, trust: 60, weekStats: { followers: 0, revenue: 0, apSaved: 0, tickets: 0, content: 0, leads: 0 } });
   s.stats.agentsHired += 1;
   grantKp(s, 'agent'); // [S8] 首次雇佣送智能体经济词条
-  pushLog(s, `「${def.name}」部署完成（¥${def.deployCost}）：trust 60 起步，月 Token 账单 ¥${def.monthlyTokenBase} 起，业务越大烧得越多。自动化不是放手不管。`, 'good');
+  pushLog(s, `「${def.name}」部署完成（¥${def.deployCost}）：trust 60 起步，Token ¥${def.monthlyTokenBase}/月起（每日按 1/30 扣现），业务越大烧得越多。自动化不是放手不管。`, 'good');
   return { ok: true, msg: `已部署「${def.name}」`, floatTexts: [{ text: '智能体+', cls: 'good' }] };
 }
 
@@ -112,15 +146,19 @@ export function fireAgent(s: StateSlice, id: AgentId, rng: Rng): ActionResult {
 export function tickAgentsDay(s: StateSlice, rng: Rng): void {
   if (s.meta.over) return;
   const monthBoundary = s.meta.day % 30 === 0;
+  const weekStart = s.meta.day % 7 === 1; // 新周第一天：weekStats 清零重算
   const butlerOn = s.agents.some(a => a.id === 'butler');
   const butlerMult = butlerOn ? 1.1 : 1; // 编排放大其他智能体产出 10%
   const market = findLocation(s.location)?.marketMult ?? 1; // [S9] 获客/成单产出随地点市场规模
   const aliveProjects = s.projects.filter(p => p.alive);
 
-  // --- ① 替代域行动的自动执行 ---
+  if (weekStart) resetAgentWeekStats(s);
+
+  // --- ① 替代域行动的自动执行 + [v0.10/W4] 每日工作日志（purple，具体数字可感知） ---
   for (const a of s.agents) {
     const def = findAgent(a.id);
-    if (!def || a.id === 'butler') continue; // butler 只做编排（乘子+抽成），不直接产出
+    if (!def) continue;
+    const ws = weekStatsOf(a);
     const trustF = a.trust < 40 ? 0.5 : 1; // trust<40 效率减半（§8.1）
     const eff = def.efficiency * trustF * butlerMult;
     switch (a.id) {
@@ -129,27 +167,58 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
         if (acc.state !== 'banned') {
           const gain = Math.max(1, Math.round(rng.int(3, 10) * a.usageScale * eff * market));
           acc.followers += gain;
+          ws.followers += gain;
           s.stats.followersPeak = Math.max(s.stats.followersPeak, acc.followers);
           acc.banRisk = clamp01(acc.banRisk + 0.2 * a.usageScale); // §8.5 投放用量计入平台 banRisk
+          pushLog(s, `【${def.name}】今日拉新 +${gain} 粉（主平台 ${Math.round(acc.followers)}）· banRisk ${Math.round(acc.banRisk)}`, 'purple');
+        }
+        // [v0.10/W4] 每周（新周首日）产生 1-3 条销售线索（butler 编排为其 40%）
+        if (weekStart) {
+          let leads = rng.int(1, 3);
+          if (butlerOn) leads += Math.max(1, Math.round(leads * 0.4));
+          s.stats.leads += leads;
+          ws.leads += leads;
+          pushLog(s, `【${def.name}】本周线索池入账 +${leads} 条（累计 ${s.stats.leads}）——交付类行动接单成功率 +${Math.round(Math.min(0.15, s.stats.leads * 0.01) * 100)}%`, 'purple');
         }
         break;
       }
       case 'content': {
-        if (!rng.chance(Math.min(0.9, 0.2 + 0.25 * a.usageScale))) break;
+        // [v0.10/W4] 每 2 日自动产 1 篇（等效 writeContent 的 40% 效果），日志可见
+        const due = (s.meta.day - a.hiredDay) % 2 === 0;
+        if (!due) break;
         const pid = primaryPlatformId(s);
         const acc = ensureAccount(s, pid);
         if (acc.state === 'banned') break;
         const r = publishContent(s, pid, rng); // 走平台引擎：抽样/banRisk/AI 检测全联动
-        const extra = Math.round(r.followers * (eff - 1)); // 效率差补足（eff<1 时为负，代表同质化削流量）
-        if (extra !== 0) {
-          acc.followers = Math.max(0, acc.followers + extra);
-          s.stats.followersPeak = Math.max(s.stats.followersPeak, acc.followers);
-        }
+        const scaled = Math.max(0, Math.round(r.followers * 0.4)); // 等效 40% 涨粉
+        const giveBack = r.followers - scaled;
+        acc.followers = Math.max(0, acc.followers - giveBack);
+        s.stats.followersPeak = Math.max(s.stats.followersPeak, acc.followers);
         s.stats.contentPublished += 1;
+        ws.content += 1;
+        ws.followers += scaled;
+        if (r.income > 0) ws.revenue += r.income;
+        pushLog(s, `【${def.name}】自动产出第 ${ws.content} 篇内容（等效 40%）：粉丝 +${scaled}${r.income > 0 ? ` · 变现 +¥${Math.round(r.income * 0.4)}` : ''}`, 'purple');
+        if (r.income > 0) {
+          // 自动内容变现按 40% 等效折算（引擎侧 publishContent 已全额入账，回冲 60%）
+          const giveBackCash = Math.round(r.income * 0.6);
+          s.cash -= giveBackCash;
+          s.stats.totalRevenue -= giveBackCash;
+          s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) - giveBackCash;
+        }
         break;
       }
       case 'support': {
-        for (const p of aliveProjects) p.maintenance = clamp01(p.maintenance - 0.8 * eff); // 自动消化客服与工单
+        // [v0.10/W4] 在营项目 maintenance 日 -0.8×eff（替代域）之外再 -0.5（数值加成），churn −20% 见 settleProjectsMonth
+        const reliefTotal = 0.8 * eff + 0.5;
+        let tickets = 0;
+        for (const p of aliveProjects) {
+          p.maintenance = clamp01(p.maintenance - reliefTotal);
+          tickets += Math.round(4 + p.users * 0.02);
+        }
+        tickets = Math.round(tickets * a.usageScale * trustF);
+        ws.tickets += tickets;
+        pushLog(s, `【${def.name}】今日处理 ${tickets} 工单 · 维护 -${Math.round(reliefTotal * aliveProjects.length)} · 满意度+`, 'purple');
         break;
       }
       case 'sales': {
@@ -159,11 +228,49 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
           s.stats.totalRevenue += income;
           s.stats.orders += 1;
           s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + income;
+          s.dailyFlow.serviceIn += income;
+          ws.revenue += income;
+          pushLog(s, `【${def.name}】自动成单 +¥${income}（×${eff.toFixed(2)} 效率 · 市场系数 ${market.toFixed(2)}）`, 'purple');
+        } else {
+          pushLog(s, `【${def.name}】今日跟进 ${Math.round(6 * a.usageScale)} 个线索，未成交——话术库还在学。`, 'purple');
         }
         break;
       }
-      default: break; // legalfin/regagent：无每日产出，月度结算见下
+      case 'legalfin': {
+        pushLog(s, `【${def.name}】今日对账 ${rng.int(3, 9)} 笔流水 · 发票校验通过 · 月底自动报税（合规 +2/月）`, 'purple');
+        break;
+      }
+      case 'regagent': {
+        pushLog(s, `【${def.name}】今日巡检资质与年检日历 · 注册类行动现金成本 -30%生效中`, 'purple');
+        break;
+      }
+      case 'butler': {
+        // [v0.10/W4] 每日额外返 0.2 AP（攒够 1 点补发，银行封顶 1）
+        const bank = num(s.flags.butlerApBank);
+        const nb = Math.min(1, bank + 0.2);
+        if (nb >= 1) {
+          s.ap += 1;
+          s.flags.butlerApBank = 0;
+          ws.apSaved += 1;
+        } else {
+          s.flags.butlerApBank = nb;
+        }
+        pushLog(s, `【${def.name}】今日编排六线运转 · 其他智能体效果 40% 加成中${nb >= 1 ? ' · 返还 1 AP' : ` · AP 银行 ${nb.toFixed(1)}/1.0`}`, 'purple');
+        break;
+      }
+      default: break;
     }
+  }
+
+  // --- ①b [v0.10/W3] Token 日结：当日用量×priceIndex 扣现（月底只汇总对账，不再大额扣款） ---
+  const dayBill = dailyTokenBill(s);
+  if (dayBill > 0) {
+    s.cash -= dayBill;
+    s.stats.tokenSpent += Math.round(dayBill);
+    s.stats.totalExpense += Math.round(dayBill);
+    s.dailyFlow.tokenOut += dayBill;
+    s.tokenBill.yesterday = dayBill;
+    s.tokenBill.monthToDate += dayBill;
   }
 
   // --- autoLevel 重算 + 幽灵公司旗标（每日必要 AP 降为 1 由 time 层处理） ---
@@ -221,9 +328,8 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
     }
   }
 
-  // --- Token 用量记账（账单本身由 time.ts 月结块写入 tokenBill.lastMonth → settleMonth 扣款） ---
-  const bill = monthlyTokenBill(s, rng);
-  s.stats.tokenSpent += Math.round(bill);
+  // --- [v0.10/W3] Token 月度对账（现金已逐日扣，此处只做烧钱警报判定与汇总口径） ---
+  const bill = monthlyTokenBill(s); // 月账单口径（当期在岗智能体的整月投影）
   // 烧钱警报记账：连续 2 月账单 > 上月收入 60%（事件体由 S5 提供 id 'token-burn-warning'）
   if (s.monthlyIncome > 0 && bill > s.monthlyIncome * 0.6) {
     s.flags.tokenBurnStreak = num(s.flags.tokenBurnStreak) + 1;
@@ -265,7 +371,7 @@ function agentMonthlyUnits(s: StateSlice, id: AgentId, alive: number): number {
 }
 
 /** §8.2 月账单 = Σ(base + perUnit×units×usageScale)×priceIndex；butler 对其他智能体账单抽成 10% */
-export function monthlyTokenBill(s: StateSlice, rng: Rng): number {
+export function monthlyTokenBill(s: StateSlice, rng?: Rng): number {
   void rng;
   const pi = s.tokenBill.priceIndex;
   const alive = s.projects.filter(p => p.alive).length;
@@ -280,6 +386,11 @@ export function monthlyTokenBill(s: StateSlice, rng: Rng): number {
   }
   const orchestration = s.agents.some(a => a.id === 'butler') ? othersPre * 0.1 : 0;
   return (othersPre + butlerPre + orchestration) * pi;
+}
+
+/** [v0.10/W3] Token 日账单 = 月账单 / 30（每日扣现，反馈前置） */
+export function dailyTokenBill(s: StateSlice): number {
+  return monthlyTokenBill(s) / 30;
 }
 
 // ---------- 单位经济面板（§8.2，UI S7 常驻） ----------

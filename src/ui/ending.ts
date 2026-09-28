@@ -12,7 +12,7 @@ import { getCtx } from './registry';
 import { SFX } from './sfx';
 import { clearModals } from './modal';
 import { startScene, stopScene } from './scene';
-import { saveToSlot } from '../save/save';
+import { clearSlot, saveToSlot } from '../save/save';
 
 // ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
 
@@ -201,6 +201,9 @@ export function renderEndingScreen(key: string): void {
   document.body.className = '';
   removeExistingOverlay();
   const def = findEnding(key);
+  // [v0.10/W5] 终局型结局（非 active）→ 立即清除 auto 槽：标题屏「继续经营」不能再读回已结束的档；
+  // 主动结局保留存档（「继续经营」回头入口需要它）。
+  if (!isActiveEnding(key)) clearSlot('auto');
   if (def?.color === 'bad') SFX.lose();
   else SFX.win();
 

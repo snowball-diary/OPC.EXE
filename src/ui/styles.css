@@ -161,7 +161,9 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
   border: 3px solid var(--dark);
   padding: 4px 10px;
   overflow: hidden;
+  cursor: pointer; /* [v0.10/W6] 点击 → 近 7 日新闻弹窗 */
 }
+.news-ticker:hover { border-color: var(--cyan); }
 .news-tag { color: var(--gold); flex: none; display: flex; }
 .news-scroll { overflow: hidden; flex: 1; white-space: nowrap; }
 .news-inner {
@@ -835,3 +837,24 @@ canvas.pix { image-rendering: pixelated; image-rendering: crisp-edges; display: 
 .title-author a { color: var(--cyan); text-decoration: none; }
 .end-credit { margin-top: 14px; color: var(--dim); font-size: 10px; text-align: center; }
 .end-credit a { color: var(--cyan); text-decoration: none; }
+
+/* ---------- [v0.10] 日结与写实化追加 ---------- */
+/* 财务 Tab：今日净流面板 */
+.fin-flow { padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+/* Runway <3 个月整块红框警示 */
+.runway-alert { border: 3px solid var(--red); background: #3a1414; color: var(--red); padding: 10px 14px; margin-bottom: 10px; animation: blink-border 1.2s steps(2) infinite; }
+@keyframes blink-border { 50% { border-color: #7a2a2a; } }
+/* 状态页健康提示 */
+.health-hints { margin: 2px 0; }
+/* 项目看板：生命周期时间轴 */
+.stage-dots { display: flex; gap: 4px; align-items: center; margin: 4px 0; }
+.stage-dots i { width: 9px; height: 9px; border: 2px solid var(--dim); border-radius: 50%; flex: none; }
+.stage-dots i.done { background: var(--dim); border-color: var(--dim); }
+.stage-dots i.cur { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 6px var(--gold); }
+/* 灰产清算风险条 */
+.gray-risk { margin-top: 4px; }
+/* 智能体本周贡献 */
+.week-contrib { margin-top: 4px; padding: 4px 6px; background: rgba(155, 89, 182, 0.12); border-left: 3px solid var(--purple); font-size: 10px; }
+/* 图鉴：关于作者块 */
+.about-author { padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 11px; }
+.about-author a { color: var(--cyan); text-decoration: none; }

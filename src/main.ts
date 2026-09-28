@@ -12,7 +12,7 @@ import {
 import { apMaxFor } from './core/health';
 import { ACTION_DEFS } from './data/actions.def';
 import { findEventDef } from './data/events.def';
-import { loadSlot, saveToSlot } from './save/save';
+import { canContinueFromSlot, loadSlot, saveToSlot } from './save/save';
 import { renderEndingScreen } from './ui/ending';
 import { bindFloatLayer, capFloats, FLOAT_MAX, floatText } from './ui/float';
 import {
@@ -42,7 +42,8 @@ const SPECIAL_SCENE: Record<string, SceneMode> = {
   developProject: 'build', validateProject: 'build', polishQuality: 'build', makeCourse: 'build',
   userInterview: 'network', community: 'network', bizCoop: 'network',
   outsource: 'auto', writeSop: 'auto', automationBuild: 'auto',
-  exercise: 'rest', meditate: 'rest', deepRest: 'rest', socialize: 'rest', travel: 'rest', medical: 'rest'
+  exercise: 'rest', meditate: 'rest', deepRest: 'rest', socialize: 'rest', travel: 'rest', medical: 'rest',
+  earlySleep: 'rest' // [v0.10/W1] 22:30 早睡
 };
 
 function sceneModeForAction(id: string): SceneMode {
@@ -113,6 +114,10 @@ function uiDispatch(a: Action): ActionResult {
     }
   }
   refreshUi();
+  // [v0.10/W1] 22:30 早睡：立即结束今天（走既有「结束今天」入口，引擎标记由 UI 消费）
+  if (r.ok && a.t === 'act' && a.id === 'earlySleep' && g.state.flags.earlySleptToday === true) {
+    onEndDay();
+  }
   return r;
 }
 
@@ -126,12 +131,13 @@ function showTitle(): void {
   setGame(null);
   document.body.className = '';
   if (!app) return;
-  const hasSave = loadSlot('auto') !== null;
+  // [v0.10/W5] 有档 **且** 未终局才可继续：终局后 auto 槽已清（或残留旧终局档）→ 禁用并说明
+  const cont = canContinueFromSlot(loadSlot('auto'));
   app.innerHTML = `
     <section id="screen-title" class="screen active">
       <div class="game-logo">OPC.exe<span class="cursor"></span></div>
       <div class="game-sub">一人公司物语 · 人生操作系统</div>
-      <div class="version-tag">one-person-company os · 全代码像素 · 零素材</div>
+      <div class="version-tag">one-person-company os · 全代码像素 · 零素材 · build by 赖嘉诚</div>
       <div class="title-author">by 赖嘉诚 · <a href="https://laijiacheng.com" target="_blank" rel="noopener">laijiacheng.com</a></div>
       <div class="title-tip px-frame">
         <p>&gt; 你是一人公司的全部：唯一的员工、唯一的资产、唯一的风险敞口。</p>
@@ -140,7 +146,7 @@ function showTitle(): void {
       </div>
       <div class="title-btns">
         <button class="px-btn gold" id="btn-new">新的公司<span class="blink">_</span></button>
-        <button class="px-btn" id="btn-continue" ${hasSave ? '' : 'disabled title="没有自动存档"'}>继续经营</button>
+        <button class="px-btn" id="btn-continue" ${cont.ok ? '' : `disabled title="${cont.reason}"`}>继续经营</button>
       </div>
     </section>`;
   app.querySelector<HTMLButtonElement>('#btn-new')?.addEventListener('click', () => {
@@ -171,6 +177,13 @@ function continueGame(): void {
   const sv = loadSlot('auto');
   if (!sv) {
     enqueueNotice('读档失败', '没有可用的自动存档。', 'bad');
+    processQueue();
+    return;
+  }
+  // [v0.10/W5] 双保险：终局档不允许从这里继续（结局屏会另开人生报告入口）
+  const cont = canContinueFromSlot(sv);
+  if (!cont.ok) {
+    enqueueNotice('无法继续', cont.reason, 'bad');
     processQueue();
     return;
   }

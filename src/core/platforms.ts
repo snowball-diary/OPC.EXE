@@ -149,6 +149,7 @@ export function publishContent(s: StateSlice, pid: string, rng: Rng): { ok: bool
     if (tier === 15) s.stats.bigHits += 1;
     s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + income;
     s.flags[`pl_inc_${pid}`] = num(s.flags[`pl_inc_${pid}`]) + income;
+    s.dailyFlow.passiveIn += income; // [v0.10/W2] 发布即时变现 → 今日净流
   }
 
   const aiNote = aiFlagged ? '（AI 未声明被标记！）' : '';
@@ -269,6 +270,7 @@ export function rollPlatformDay(s: StateSlice, rng: Rng): void {
         s.stats.totalRevenue += inc;
         s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + inc;
         s.flags[`pl_inc_${pid}`] = num(s.flags[`pl_inc_${pid}`]) + inc;
+        s.dailyFlow.passiveIn += inc; // [v0.10/W2] 平台日变现 → 今日净流
       }
     }
     if (acc.banRisk > 0) acc.banRisk = Math.max(0, acc.banRisk - 0.3); // 改过自新缓降
@@ -281,7 +283,9 @@ export function rollPlatformDay(s: StateSlice, rng: Rng): void {
     for (const pid of Object.keys(s.platforms)) s.flags[`pl_inc_${pid}`] = 0;
   }
   const dep = platformDependency(s);
-  if (dep && num(s.flags.plDepWarnDay) < s.meta.day - 6) {
+  // [v0.10/体感修复] 依赖警戒加收入地板：月入不足 ¥500 时占比>60% 只是噪声
+  // （样张实证：观察期刚结束、平台月入 ¥7 也弹「依赖警戒」，玩家被假警报练出免疫）
+  if (dep && num(s.flags[`pl_inc_${dep}`]) >= 500 && num(s.flags.plDepWarnDay) < s.meta.day - 6) {
     s.flags.plDepWarnDay = s.meta.day;
     pushLog(s, `单平台依赖警戒：「${findPlatform(dep)?.name ?? dep}」收入占比 >60%，该平台风控事件概率 ×3。鸡蛋别放一个篮子里。`, 'bad');
   }

@@ -1,4 +1,4 @@
-// 行动表 ~32 条（技术文档 §5.4；设计 §五）——四类：输入/输出/经营/身心，全中文文案
+// 行动表 38 条（技术文档 §5.4；设计 §五；[v0.10/W1] +饮食五连）——四类：输入/输出/经营/身心，全中文文案
 // domain = 瓶颈域（周复盘焦点 +15%/-10% 也按此判定，AgentDef.replaces 未来按此接管）
 import type { ActionDef } from '../core/types';
 
@@ -43,6 +43,12 @@ export const ACTION_DEFS: ActionDef[] = [
   // mentalBreak 占 22.7%——恢复侧经济仍入不敷出）：deepRest 睡眠 +14/饮食 +6/压力 -8，
   // 运动 +10~16，就医睡眠 +16/隐性疲劳 -10，冥想压力 -16~-11。漂移与 AP 口径未动。
   { id: 'exercise', name: '运动', desc: '出出汗：运动子项+，压力-。铁不是钢，但铁要练。', cat: 'self', ap: 1, energy: 10, special: 'exercise', domain: 'health', effects: [{ k: 'exercise', op: '+', v: [10, 16] }, { k: 'stress', op: '+', v: -4 }, { k: 'mood', op: '+', v: 2 }] },
+  // ---------- [v0.10/W1] 健康饮食模块：diet 漂移 -5/日 的专门解法（此前只有间接恢复） ----------
+  { id: 'eatWell', name: '好好吃饭', desc: '按时吃顿有菜有蛋的正餐：饮食+12、情绪+3。¥40 买的是不崩溃的底座。', cat: 'self', ap: 1, energy: 0, cash: 40, domain: 'health', effects: [{ k: 'diet', op: '+', v: 12 }, { k: 'mood', op: '+', v: 3 }] },
+  { id: 'cook', name: '自己做饭', desc: '买菜下厨：饮食+9、认知+1。便宜但费神——长期主义的吃法。', cat: 'self', ap: 1, energy: 4, cash: 12, domain: 'health', effects: [{ k: 'diet', op: '+', v: 9 }, { k: 'cognition', op: '+', v: 1 }] },
+  { id: 'takeout', name: '外卖凑合', desc: '不占 AP 的快选项：饮食+4。贵且油，但至少是热的。', cat: 'self', ap: 0, energy: 0, cash: 45, domain: 'health', effects: [{ k: 'diet', op: '+', v: 4 }] },
+  { id: 'coffee', name: '咖啡续命', desc: '精力+10、睡眠-3：经典双刃剑。账记在晚上。', cat: 'self', ap: 0, energy: -10, cash: 25, domain: 'health', effects: [{ k: 'sleep', op: '+', v: -3 }] },
+  { id: 'earlySleep', name: '22:30 早睡', desc: '睡眠+15、压力-5，并立即结束今天——今天的其余可能性换一夜好觉。', cat: 'self', ap: 1, energy: 0, special: 'earlySleep', domain: 'health', effects: [{ k: 'sleep', op: '+', v: 15 }, { k: 'stress', op: '+', v: -5 }] },
   { id: 'meditate', name: '冥想', desc: '十分钟呼吸：压力显著下降，System1 的解药。', cat: 'self', ap: 1, energy: 4, special: 'meditate', domain: 'health', effects: [{ k: 'stress', op: '+', v: [-16, -11] }, { k: 'mood', op: '+', v: 3 }, { k: 'cognition', op: '+', v: 1 }] },
   { id: 'deepRest', name: '深度休息', desc: '半天彻底离线：睡到自然醒、好好吃一顿。精力大回复，隐性疲劳-15。', cat: 'self', ap: 1, energy: 0, special: 'deepRest', domain: 'health', effects: [{ k: 'energy', op: '+', v: 30 }, { k: 'sleep', op: '+', v: 16 }, { k: 'diet', op: '+', v: 6 }, { k: 'stress', op: '+', v: -8 }] },
   { id: 'socialize', name: '社交养关系', desc: '约朋友或客户吃饭：关系值+，情绪+，顺带吃了顿好的。', cat: 'self', ap: 1, energy: 8, cash: 300, special: 'socialize', domain: 'health', effects: [{ k: 'mood', op: '+', v: 7 }, { k: 'diet', op: '+', v: 2 }, { k: 'stress', op: '+', v: -2 }] },

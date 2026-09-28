@@ -151,8 +151,11 @@ export function createInitialSlice(setup: SetupConfig): StateSlice {
     agents: [],
     autoLevel: 0,
     osRules: [],
-    tokenBill: { lastMonth: 0, priceIndex: 1 },
+    tokenBill: { yesterday: 0, monthToDate: 0, priceIndex: 1 },
     portfolio: { cash: 0, fund: 0, bond: 0, indexFund: 0, stock: 0, crypto: 0, realEstate: 0 },
+    portfolioCost: { cash: 0, fund: 0, bond: 0, indexFund: 0, stock: 0, crypto: 0, realEstate: 0 },
+    investGains: { realizedTotal: 0, realizedMonth: 0, floatToday: 0, floatMonth: 0 },
+    dailyFlow: { projIn: 0, passiveIn: 0, serviceIn: 0, livingOut: 0, subsOut: 0, tokenOut: 0, otherOut: 0 },
     debt: 0,
     runway: 0,
     monthlyIncome: 0,
@@ -175,6 +178,7 @@ export function createInitialSlice(setup: SetupConfig): StateSlice {
       maxCash: cash, maxRunway: 0,
       grayDeals: 0, audits: 0, accidents: 0, contactsMade: 0,
       followersPeak: 0, bigHits: 0, eventsSeen: 0, patchesInstalled: 0, agentsHired: 0,
+      leads: 0,
       endingsSeen: []
     },
     pending: { events: [], chains: [], kpQueue: [] },
@@ -287,8 +291,16 @@ export function clampAll(s: StateSlice): StateSlice {
   for (const key of Object.keys(port) as (keyof typeof port)[]) {
     port[key] = Math.max(0, Math.round(port[key]));
   }
+  if (!s.portfolioCost) s.portfolioCost = { ...port }; // [v0.10] 旧档兜底：成本=当前市值（已实现收益从零起算）
+  const pc = s.portfolioCost;
+  for (const key of Object.keys(pc) as (keyof typeof pc)[]) {
+    pc[key] = Math.max(0, Math.min(port[key], Math.round(pc[key])));
+  }
   s.tokenBill.priceIndex = Math.max(0.1, s.tokenBill.priceIndex);
-  s.tokenBill.lastMonth = Math.max(0, s.tokenBill.lastMonth);
+  s.tokenBill.yesterday = Math.max(0, s.tokenBill.yesterday);
+  s.tokenBill.monthToDate = Math.max(0, s.tokenBill.monthToDate);
+  if (!s.investGains) s.investGains = { realizedTotal: 0, realizedMonth: 0, floatToday: 0, floatMonth: 0 };
+  if (!s.dailyFlow) s.dailyFlow = { projIn: 0, passiveIn: 0, serviceIn: 0, livingOut: 0, subsOut: 0, tokenOut: 0, otherOut: 0 };
   return s;
 }
 

@@ -1,6 +1,7 @@
 // 行动执行器（技术文档 §5.4）：cond 检查 → S1 衰减 → healthMult → 特质/补丁/地点乘子 → effects 落账 → special 分支 → 日志飘字
 import { findAction, pricingMult } from '../data/actions.def';
 import { findLocation } from '../data/locations.def';
+import { agentBizMult, weekStatsOf } from './agents';
 import { healthMult, num } from './health';
 import { patchMult } from './os';
 import { publishContent } from './platforms';
@@ -108,6 +109,11 @@ export function applyEffects(s: StateSlice, effects: readonly Effect[], ctx: Eff
         if (e.op === '+' && v > 0 && s.flags.zen === true) v *= 0.9; // 佛系：收入×0.9
         s.cash = e.op === '=' ? v : s.cash + v;
         s.flags.weekCashDelta = num(s.flags.weekCashDelta) + v;
+        // [v0.10/W2] 今日净流分项：正=发生时收入（serviceIn），负=行动/事件现金支出（otherOut）
+        if (e.op !== '=') {
+          if (v > 0) s.dailyFlow.serviceIn += v;
+          else s.dailyFlow.otherOut += -v;
+        }
         break;
       }
       case 'debt': s.debt = Math.max(0, e.op === '=' ? val : s.debt + val); break;
@@ -140,7 +146,7 @@ export function applyEffects(s: StateSlice, effects: readonly Effect[], ctx: Eff
       case 'creditScore': s.creditScore = Math.max(0, Math.min(1000, Math.round(e.op === '*' ? s.creditScore * val : s.creditScore + val))); break;
       case 'morality': s.morality = clamp100(e.op === '*' ? s.morality * val : s.morality + val); break;
       case 'autoLevel': s.autoLevel = clamp100(e.op === '*' ? s.autoLevel * val : s.autoLevel + val); break;
-      case 'tokenBill': s.tokenBill.lastMonth = Math.max(0, s.tokenBill.lastMonth + val); break;
+      case 'tokenBill': s.tokenBill.monthToDate = Math.max(0, s.tokenBill.monthToDate + val); break;
       case 'tokenPriceIndex': s.tokenBill.priceIndex = e.op === '=' ? raw : s.tokenBill.priceIndex + val; break;
       case 'attentionCap': s.attentionCap = Math.max(1, s.attentionCap + Math.round(val)); break;
       case 'contacts': for (let i = 0; i < Math.max(0, Math.round(val)); i++) addContact(s, 'peer'); break;
@@ -194,7 +200,8 @@ interface SpecialResult {
 }
 
 function pickPlatformId(s: StateSlice): string {
-  const entries = Object.entries(s.platforms);
+  // [v0.10/W8] 修复：过滤已封禁账号（与 agents.primaryPlatformId 口径一致，否则发布动作会瞄准死号）
+  const entries = Object.entries(s.platforms).filter(([, a]) => a && a.state !== 'banned');
   if (entries.length === 0) return 'wechat';
   let best = entries[0];
   for (const e of entries) {
@@ -280,7 +287,8 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       s.skillExp[dim] += Math.max(1, Math.round(6 * mult));
       checkSkillUp(s, dim);
       floats.push({ text: `粉丝+${r.followers}`, cls: 'good' });
-      return { msg: `发布到 ${pid}：${r.msg}`, floats };
+      // [v0.10/W8] 文案带具体数字（涨粉/变现都摊开）
+      return { msg: `发布到 ${pid}：${r.msg}（粉丝 +${r.followers}${r.income > 0 ? ` · 变现 +¥${r.income.toLocaleString('en-US')}` : ''}）`, floats };
     }
     case 'market': {
       const pid = pickPlatformId(s);
@@ -288,7 +296,7 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       s.skillExp.marketing += Math.max(1, Math.round(5 * mult));
       checkSkillUp(s, 'marketing');
       floats.push({ text: `曝光+${r.followers * 10}`, cls: 'good' });
-      return { msg: `分发到 ${pid}：${r.msg}`, floats };
+      return { msg: `分发到 ${pid}：${r.msg}（粉丝 +${r.followers} · 曝光 +${r.followers * 10}${r.income > 0 ? ` · 变现 +¥${r.income.toLocaleString('en-US')}` : ''}）`, floats };
     }
     case 'deliver': {
       if (!proj) return { fail: '需要项目' };
@@ -297,19 +305,40 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       // [S9] 地点市场规模参与：一线单子更大（marketMult 1.35），小城 0.6——地理套利的手感落到实处
       const market = findLocation(s.location)?.marketMult ?? 1;
       const base = rng.int(1200, 2400);
-      const income = Math.max(0, Math.round(base * (0.6 + 0.15 * s.skills.business) * pricingMult(s) * (0.7 + 0.3 * proj.quality / 100) * market));
+      // [v0.10/W4] 智能体业务加成：sales 在岗收入 +15%（butler +6%）+ growth 线索池接单加成（封顶 +15%）
+      const biz = agentBizMult(s);
+      const skillF = 0.6 + 0.15 * s.skills.business;
+      const qualityF = 0.7 + 0.3 * proj.quality / 100;
+      const agentF = biz.deliverIncome * (1 + biz.leadBonus);
+      const income = Math.max(0, Math.round(base * skillF * pricingMult(s) * qualityF * market * agentF));
       s.cash += income;
       s.stats.orders += 1;
       s.stats.totalRevenue += income;
       s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + income;
       s.flags.weekCashDelta = num(s.flags.weekCashDelta) + income;
-      s.flags.weekDeliveries = num(s.flags.weekDeliveries) + 1;
       s.flags.deliveredToday = true;
+      s.dailyFlow.serviceIn += income;
+      const salesAg = s.agents.find(a => a.id === 'sales');
+      if (salesAg) weekStatsOf(salesAg).revenue += income;
       const dim = def.skill ?? 'craft';
       s.deliveries[dim] += 1;
       checkSkillUp(s, dim);
       floats.push({ text: `+¥${income}`, cls: 'gold' });
-      return { msg: `交付完成，入账 ¥${income}`, floats };
+      // [v0.10/W8] 结果文案带具体数字：每一项乘子都摊开
+      const parts = [
+        `底价 ¥${base}`,
+        `× 商业Lv${s.skills.business} ${skillF.toFixed(2)}`,
+        `× 报价 ${pricingMult(s).toFixed(2)}`,
+        `× 质量 ${qualityF.toFixed(2)}`,
+        `× 市场 ${market.toFixed(2)}`
+      ];
+      // [v0.10/体感修复] 智能体乘子标签只写真源：sales 在岗才写「销售+15%」，
+      // 线索池加成来自 growth——样张实证：无 sales 时文案也带「销售」字样误导归因
+      const agentParts: string[] = [];
+      if (biz.deliverIncome > 1) agentParts.push(`销售+${Math.round((biz.deliverIncome - 1) * 100)}%`);
+      if (biz.leadBonus > 0) agentParts.push(`线索+${Math.round(biz.leadBonus * 100)}%`);
+      if (agentF > 1) parts.push(`× 智能体 ${agentF.toFixed(2)}（${agentParts.join(' ')}）`);
+      return { msg: `交付完成，入账 ¥${income.toLocaleString('en-US')}（${parts.join(' ')}）`, floats };
     }
     case 'makeCourse': {
       if (!proj) return { fail: '需要项目' };
@@ -364,12 +393,17 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
     case 'bizCoop':
       return { msg: '合作意向达成' };
     case 'exercise':
-      return { msg: '练完了，汗是免费的' };
+      return { msg: `练完了（运动 +${Math.round(10 * mult)}~${Math.round(16 * mult)} · 压力 -4 · 情绪 +2）：汗是免费的` };
     case 'meditate':
-      return { msg: '呼吸落定，System1 退潮' };
+      return { msg: '呼吸落定（压力 -16~-11 · 情绪+3 · 认知+1）：System1 退潮' };
     case 'deepRest':
       s.flags.deepRestedToday = true;
-      return { msg: '彻底离线半天：隐性疲劳-15' };
+      return { msg: '彻底离线半天：睡眠+16 · 饮食+6 · 精力+30 · 隐性疲劳-15' };
+    case 'earlySleep':
+      // [v0.10/W1] 22:30 早睡：立即结束今天（UI 消费此标记走「结束今天」入口）
+      s.flags.earlySleptToday = true;
+      s.flags.deepRestedToday = true;
+      return { msg: '22:30 合上电脑（睡眠+15 · 压力-5 · 隐性疲劳-15）：今天到此为止', floats: [{ text: '早睡', cls: 'good' }] };
     case 'socialize': {
       let target = s.contacts[0];
       for (const c of s.contacts) if (target && c.relation > target.relation) target = c;
@@ -421,8 +455,21 @@ export function executeAction(
   if (def.needsProject && !proj) return { ok: false, msg: '需要先立项一个项目' };
   const nonRecovery = def.cat !== 'self';
   if (s.energy <= 0 && nonRecovery) return { ok: false, msg: '精力见底：请选最低日或恢复类行动' };
-  const cost = Math.round((def.cash ?? 0) * (s.flags.spendthrift === true ? 1.1 : 1));
-  if (cost > 0 && s.cash < cost) return { ok: false, msg: `现金不足（需 ¥${cost}）` };
+  // [v0.10/W4] 注册代办智能体在岗：注册类行动（主体/商标/备案）现金成本 -30%（butler 编排再 -12%）
+  const isRegisterKind = def.special === 'registerEntity' || def.special === 'trademark' || def.special === 'icpFiling';
+  const registerF = isRegisterKind ? agentBizMult(s).registerCost : 1;
+  const cost = Math.round((def.cash ?? 0) * registerF * (s.flags.spendthrift === true ? 1.1 : 1));
+  if (cost > 0 && s.cash < cost) return { ok: false, msg: `现金不足（需 ¥${cost}${registerF < 1 ? `（注册代办 -30% 已折算）` : ''}）` };
+  // [v0.10/W8] 修复「招外包」负现金缝：cash 走 effects 区间（-500~-3000）的行动需预留区间下限
+  if (cost === 0) {
+    const minCashEffect = def.effects.reduce((m, e) => {
+      if (e.k !== 'cash' || e.op !== '+' || typeof e.v !== 'object') return m;
+      return m + Math.min(0, e.v[0]);
+    }, 0);
+    if (minCashEffect < 0 && s.cash < -minCashEffect) {
+      return { ok: false, msg: `现金不足（该行动至少需要 ¥${-minCashEffect}）` };
+    }
+  }
   const apShort = s.ap < def.ap;
   if (apShort && !nonRecovery) return { ok: false, msg: 'AP 不足：恢复类行动不硬撑' };
   // special 前置校验（在扣费之前拒绝）

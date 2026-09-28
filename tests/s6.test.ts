@@ -16,7 +16,7 @@ import {
 } from '../src/ui/registry';
 import { REQUIRED_SCENE_KEYS, AGENT_COLORS, SCENE_MAP, dayPhaseOf } from '../src/ui/scene';
 import { REQUIRED_SFX, SFX_SCORES } from '../src/ui/sfx';
-import { makeFatigueModel, makeTopbarModel, PHASE_LABELS, pickNews, stageVersion } from '../src/ui/topbar';
+import { makeFatigueModel, makeTopbarModel, newsHistory, PHASE_LABELS, pickNews, stageVersion } from '../src/ui/topbar';
 
 // ---------- 夹具 ----------
 
@@ -181,22 +181,45 @@ describe('topbar：makeTopbarModel / stageVersion / pickNews', () => {
     expect(m.cashText).toContain('负债');
   });
 
-  it('pickNews：只显示当天及 3 日内（day-2 ≤ newsDay ≤ day）', () => {
+  it('[v0.10/体感修复] pickNews：游标逐日 +1 轮换（相邻两天必不同条，day1 锚点必出）', () => {
     const ticker = [
       { day: 1, text: 'A' }, { day: 2, text: 'B' }, { day: 5, text: 'C' }, { day: 9, text: 'D' }
     ];
-    expect(pickNews(ticker, 1)).toEqual(['A']);
-    expect(pickNews(ticker, 3)).toEqual(['A', 'B']); // day1 距今 2 天仍在窗口内
-    expect(pickNews(ticker, 4)).toEqual(['B']); // day1 距今 3 天出窗，day2 仍在
-    expect(pickNews(ticker, 6)).toEqual(['C']);
-    expect(pickNews(ticker, 30)).toEqual([]);
+    expect(pickNews(ticker, 1)).toEqual(['A']); // 池仅 A
+    expect(pickNews(ticker, 2)).toEqual(['B']); // 池 [A,B]，游标 1
+    expect(pickNews(ticker, 3)).toEqual(['A']); // 池 [A,B]，游标回卷 0
+    expect(pickNews(ticker, 5)).toEqual(['C']); // 池扩容 [A,B,C]：游标 (1+1)%3=2 → 新条目当天上墙
+    expect(pickNews(ticker, 9)).toEqual(['D']); // 池全量 4 条：游标 (2+1)%4=3 → D
+    expect(pickNews(ticker, 13)).toEqual(['D']); // 池稳定：4 天一圈（day10 A → 11 B → 12 C → 13 D）
+    expect(pickNews(ticker, 0)).toEqual([]); // 空池（day0 无已发布新闻）
+    // 核心不变量：任意相邻两天不同条（旧版 pool[(day-1)%len] 在扩容日会连挂两天同一条）
+    for (let d = 2; d <= 30; d++) {
+      expect(pickNews(ticker, d)[0], `day${d} 与前一日重复`).not.toBe(pickNews(ticker, d - 1)[0]);
+    }
   });
 
-  it('NEWS_TICKER day1 时代锚点必出（day1-3 窗口）', () => {
+  it('[v0.10/W6] NEWS_TICKER 30 条、day1 锚点必出、newsHistory 近 7 日', () => {
+    expect(NEWS_TICKER.length).toBe(30);
     const d1 = pickNews(NEWS_TICKER, 1);
-    expect(d1.length).toBeGreaterThan(0);
+    expect(d1.length).toBe(1);
     expect(d1[0]).toContain('张雪峰');
-    expect(pickNews(NEWS_TICKER, 7)).toHaveLength(0); // day3 条目也已出窗，day8 未到
+    // 轮换确定性：day N 只显示一条，且出自已发布池；相邻两天不重复
+    for (const d of [2, 7, 30, 100, 331]) {
+      const out = pickNews(NEWS_TICKER, d);
+      expect(out).toHaveLength(1);
+      const pool = NEWS_TICKER.filter(n => n.day <= d);
+      expect(pool.some(n => n.text === out[0])).toBe(true);
+      if (d > 1) expect(out[0]).not.toBe(pickNews(NEWS_TICKER, d - 1)[0]);
+    }
+    // 近 7 日列表：窗口 (day-7, day]，新的在前
+    const h = newsHistory(NEWS_TICKER, 24, 7);
+    expect(h.length).toBeGreaterThan(0);
+    expect(h.length).toBeLessThanOrEqual(7);
+    expect(h[0]?.day).toBe(24);
+    for (let i = 1; i < h.length; i++) {
+      expect(h[i]!.day).toBeLessThan(h[i - 1]!.day);
+      expect(24 - h[i]!.day).toBeLessThan(7);
+    }
   });
 });
 

@@ -54,7 +54,12 @@ export const ZHANG_LINES: ZhangLine[] = [
   // ---------- grayTemptation ----------
   { situation: 'grayTemptation', text: '这单毛利六成。剩下四成，是给将来的稽查预留的。' },
   { situation: 'grayTemptation', text: '上游一封封号邮件，库存就归零。这生意没有复利，只有倒计时。' },
-  { situation: 'grayTemptation', text: '不敢报税的钱不算收入，算倒计时。' }
+  { situation: 'grayTemptation', text: '不敢报税的钱不算收入，算倒计时。' },
+
+  // ---------- [v0.10/W9] 作者典故（克制：只在闲笔处提一句，不破坏毒舌风格） ----------
+  { situation: 'overwork', text: '我认识一个叫赖嘉诚的年轻人，也爱把一天掰成 48 小时用。后来他学会了早睡。' },
+  { situation: 'bankrupt', text: '我认识一个叫赖嘉诚的年轻人，第一家公司也死在现金流上。他把账本裱起来了。' },
+  { situation: 'platformBan', text: '我认识一个叫赖嘉诚的年轻人，封号后自己去搭了独立站。域名备案是自己的那种。' }
 ];
 
 /** 简单选择器：同 situation 池内按 rng 抽一条（池空返回空串） */

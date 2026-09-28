@@ -17,7 +17,25 @@ import { loadSlot } from '../../save/save';
 import { SFX } from '../sfx';
 import { getGame } from '../runtime';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/s7.test.ts / s10 覆盖） ----------
+
+export interface HealthHint {
+  key: 'sleep' | 'mood' | 'diet' | 'exercise';
+  label: string;
+  text: string; // 行动建议文案
+}
+
+/** [v0.10/W1] 健康区动态提示（纯函数）：哪个子项 <50 给对应行动建议 */
+export function healthHints(s: Readonly<StateSlice>): HealthHint[] {
+  const table: { key: HealthHint['key']; label: string; v: number; text: string }[] = [
+    { key: 'sleep', label: '睡眠', v: s.health.sleep.v, text: '睡眠告急：今晚试试「22:30 早睡」（行动→身心）' },
+    { key: 'mood', label: '情绪', v: s.health.mood.v, text: '情绪告急：约朋友吃顿饭，或冥想十分钟（行动→身心）' },
+    { key: 'diet', label: '饮食', v: s.health.diet.v, text: '饮食告急：该好好吃顿饭了（行动→身心）' },
+    { key: 'exercise', label: '运动', v: s.health.exercise.v, text: '运动告急：出出汗，汗是免费的（行动→身心）' }
+  ];
+  return table.filter(t => t.v < 50).sort((a, b) => a.v - b.v).map(({ key, label, text }) => ({ key, label, text }));
+}
+
 
 export const SKILL_EXP_THRESHOLDS: readonly number[] = [50, 120, 260, 480];
 export const SKILL_DIM_ORDER: readonly SkillDim[] = ['craft', 'expression', 'marketing', 'operation', 'business'];
@@ -131,12 +149,14 @@ function bodyHtml(s: Readonly<StateSlice>): string {
   const h = s.health;
   const health = composeHealth(h);
   const fr = fatigueReadout(s);
+  const hints = healthHints(s);
   return `
     ${secTitle('健康四子（合成 ' + Math.round(health) + '/100）')}
     ${subBarRow('睡眠 ×40%', h.sleep.v, h.sleep.drift)}
     ${subBarRow('情绪 ×25%', h.mood.v, h.mood.drift)}
     ${subBarRow('饮食 ×20%', h.diet.v, h.diet.drift)}
     ${subBarRow('运动 ×15%', h.exercise.v, h.exercise.drift)}
+    ${hints.length > 0 ? `<div class="health-hints">${hints.map(x => `<p class="s7-hint c-orange">⚠ ${escapeHtml(x.text)}</p>`).join('')}</div>` : ''}
     <div class="fatigue-line ${fr.precise ? '' : 'dim'}">
       隐性疲劳 <b class="${hfCls(h.hiddenFatigue, fr.precise)}">${fr.text}</b>
       ${fr.precise ? `　猝死风险 <b class="c-red">${pct(fr.riskPct)}</b>（公式 0.03+0.02×(hf-85)/5+0.03×硬撑天）` : '　<span class="c-dim">做一次体检（¥500）解锁精确读数</span>'}

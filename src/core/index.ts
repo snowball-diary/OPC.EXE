@@ -117,6 +117,19 @@ function withDefaults(s: StateSlice): StateSlice {
   if (!s.meta.difficulty) s.meta.difficulty = 'normal';
   if (!s.flags) s.flags = {};
   if (!s.stats.endingsSeen) s.stats.endingsSeen = [];
+  if (typeof s.stats.leads !== 'number') s.stats.leads = 0;
+  // [v0.10/W3] tokenBill：lastMonth → { yesterday, monthToDate }（旧值并入本月累计）
+  const tb = s.tokenBill as StateSlice['tokenBill'] & { lastMonth?: number };
+  if (tb && typeof tb.lastMonth === 'number') {
+    const legacy = tb.lastMonth;
+    delete tb.lastMonth;
+    tb.yesterday = tb.yesterday ?? 0;
+    tb.monthToDate = (tb.monthToDate ?? 0) + legacy;
+  }
+  // [v0.10/W2] 投资成本与盈亏记账、日流水结构（clampAll 内再兜底一次）
+  if (!s.portfolioCost) s.portfolioCost = { ...s.portfolio };
+  if (!s.investGains) s.investGains = { realizedTotal: 0, realizedMonth: 0, floatToday: 0, floatMonth: 0 };
+  if (!s.dailyFlow) s.dailyFlow = { projIn: 0, passiveIn: 0, serviceIn: 0, livingOut: 0, subsOut: 0, tokenOut: 0, otherOut: 0 };
   return s;
 }
 
@@ -135,9 +148,9 @@ export {
   composeHealth, driftDay, fatigueWarning, healthMult, recoveryState,
   rollSuddenDeath, suddenDeathP, suddenDeathRisk, tickHiddenFatigue, updateDecisionMode
 } from './health';
-export { createProject, pivotProject, retireProject, settleProjectsMonth, tickProjectsDay } from './projects';
+export { createProject, pivotProject, retireProject, settleProjectsDay, settleProjectsMonth, tickProjectsDay } from './projects';
 export { installPatch, patchMult, tickPatchesDay } from './os';
-export { livingCost, phaseMult, recalcLiving, rollPhase, settleMonth, taxDue } from './economy';
+export { dailyNet, livingCost, phaseMult, recalcLiving, rollPhase, settleMonth, taxDue, tickPortfolioDay } from './economy';
 export { buildReport, checkPassiveEndings } from './endings';
 export { weeklyReview, BOTTLENECK_LABELS } from './time';
 export {

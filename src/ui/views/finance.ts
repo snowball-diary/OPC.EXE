@@ -1,15 +1,16 @@
-// 财务视图（S7）：三张账（月损益预估：收入分项/支出分项/净额与税）+ Runway 大数字
-// + 被动收入覆盖率（自由线 100%）+ 净资产/负债/信用分 + 主体形态与税档说明。
+// 财务视图（S7）：今日净流（[v0.10/W2] 日结口径）+ 三张账（月损益预估：收入分项/支出分项/净额与税，
+// [v0.10/W8] 分项带环比箭头）+ Runway 大数字（<3 个月整块红框警示）+ 被动收入覆盖率（自由线 100%）
+// + 净资产/负债/信用分 + 主体形态与税档说明。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
-import { bookkeepingFee, livingCost, monthlySubs, taxDue } from '../../core/economy';
+import { bookkeepingFee, dailyNet, livingCost, monthlySubs, taxDue } from '../../core/economy';
 import { netWorth } from '../../data/endings.def';
 import { findPatch } from '../../data/patches.def';
 import { findProjectType } from '../../data/projects.def';
-import type { StateSlice } from '../../core/types';
-import { barHtml, pct, yuan } from '../fmt';
+import type { MonthReport, StateSlice } from '../../core/types';
+import { barHtml, escapeHtml, numFmt, pct, yuan } from '../fmt';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/s7.test.ts / s10 覆盖） ----------
 
 export interface RunwayBand {
   cls: string;
@@ -22,6 +23,31 @@ export function runwayBand(runway: number): RunwayBand {
   if (runway < 3) return { cls: 'red', label: '警报：跑道不足 3 个月' };
   if (runway < 6) return { cls: 'orange', label: '偏紧：增收或砍支' };
   return { cls: 'green', label: '健康' };
+}
+
+/** [v0.10/W8] 环比箭头（纯函数）：vs 上月同项；上月为 0 时显示「新」 */
+export function momArrow(cur: number, prev: number | undefined): { text: string; cls: string } {
+  if (prev === undefined || !Number.isFinite(prev)) return { text: '', cls: '' };
+  if (prev === 0) return cur > 0 ? { text: '▲ 新增', cls: 'c-green' } : { text: '', cls: '' };
+  const ratio = (cur - prev) / Math.abs(prev);
+  if (Math.abs(ratio) < 0.005) return { text: '— 持平', cls: 'c-dim' };
+  const arrow = ratio > 0 ? '▲' : '▼';
+  const pctText = `${arrow} ${Math.abs(Math.round(ratio * 100))}% vs 上月`;
+  return { text: pctText, cls: ratio > 0 ? 'c-green' : 'c-red' };
+}
+
+/** [v0.10/W8] 月报环比行装配（纯函数）：当前月预估 sheet vs 上月月报（s.lastMonthReport） */
+export function momRows(sheet: FinanceSheet, prev: MonthReport | undefined): { label: string; arrow: ReturnType<typeof momArrow> }[] {
+  if (!prev) return [];
+  const service = sheet.incomeRows[1]?.value ?? 0;
+  return [
+    { label: '月收入合计', arrow: momArrow(sheet.incomeTotal, prev.incomeProject + prev.incomeService + prev.incomeInvest) },
+    { label: '项目 MRR（在营合计）', arrow: momArrow(sheet.incomeRows[0]?.value ?? 0, prev.incomeProject) },
+    { label: '交付 / 内容 / 平台现金', arrow: momArrow(service, prev.incomeService) },
+    { label: '生活费（地点×难度系数）', arrow: momArrow(sheet.expenseRows[0]?.value ?? 0, prev.expenseLiving) },
+    { label: 'Token 账单（月累计）', arrow: momArrow(sheet.expenseRows[4]?.value ?? 0, prev.expenseToken) },
+    { label: '月净额（预估）', arrow: momArrow(sheet.profit, prev.profit) }
+  ];
 }
 
 /** 被动收入覆盖率（纯函数）：自由线 = 被动收入 ≥ 生活费（100%） */
@@ -59,7 +85,7 @@ export function financeSheet(s: Readonly<StateSlice>): FinanceSheet {
     { label: '工具订阅', value: monthlySubs(s) },
     { label: '代账费', value: bookkeepingFee(s) },
     { label: '项目月维护（Σ类型基线）', value: projectUpkeep },
-    { label: 'Token 账单（上月）', value: Math.round(s.tokenBill.lastMonth) },
+    { label: 'Token 账单（月累计）', value: Math.round(s.tokenBill.monthToDate) },
     { label: 'OS 补丁维护', value: Math.round(upkeep) }
   ];
   const incomeTotal = Math.round(incomeRows.slice(0, 2).reduce((a, r) => a + r.value, 0));
@@ -84,14 +110,30 @@ function sheetRow(label: string, value: number, cls = ''): string {
   return `<div class="sheet-row"><span>${label}</span><b class="${cls}">${yuan(value)}</b></div>`;
 }
 
+function sheetRowMom(label: string, value: number, arrow: { text: string; cls: string }, cls = ''): string {
+  const a = arrow.text ? ` <small class="${arrow.cls}">${escapeHtml(arrow.text)}</small>` : '';
+  return `<div class="sheet-row"><span>${label}${a}</span><b class="${cls}">${yuan(value)}</b></div>`;
+}
+
 function register(el: HTMLElement, ctx: UiCtx): void {
   const s = ctx.state;
   const sheet = financeSheet(s);
   const rb = runwayBand(s.runway);
   const cov = passiveCoverage(sheet.incomeRows[2]?.value ?? 0, livingCost(s));
   const nw = netWorth(s);
+  // [v0.10/W2] 今日净流（日结口径）+ 昨日净流留档
+  const net = dailyNet(s.dailyFlow);
+  const lastNet = typeof s.flags.lastDayNet === 'number' ? s.flags.lastDayNet : null;
+  const arrows = momRows(sheet, s.lastMonthReport);
+  const arrowOf = (label: string): { text: string; cls: string } => arrows.find(a => a.label === label)?.arrow ?? { text: '', cls: '' };
   el.innerHTML = `
     <div class="fin-view">
+      ${s.runway < 3 && s.runway >= 0 ? `<div class="runway-alert px-frame">⚠ 跑道不足 3 个月（当前 ${s.runway}）：现金 ${yuan(Math.round(s.cash))} ÷ 月净支出 ${yuan(sheet.expenseTotal)}。增收、砍支、或去接单——跑道归零的那天，前景不会替你交房租。</div>` : ''}
+      <div class="fin-flow px-frame">
+        <span class="rb-label">今日净流（[v0.10] 日结口径）</span>
+        <b class="px-num ${net >= 0 ? 'c-green' : 'c-red'}">${net >= 0 ? '+' : ''}${yuan(Math.round(net))}</b>
+        <span class="dim-line">项目 +${numFmt(s.dailyFlow.projIn)} · 被动 +${numFmt(s.dailyFlow.passiveIn)} · 服务 +${numFmt(s.dailyFlow.serviceIn)} · 生活 -${numFmt(s.dailyFlow.livingOut)} · 订阅 -${numFmt(s.dailyFlow.subsOut)} · Token -${numFmt(s.dailyFlow.tokenOut)} · 其他 -${numFmt(s.dailyFlow.otherOut)}${lastNet !== null ? `　·　昨日 ${lastNet >= 0 ? '+' : ''}${yuan(lastNet)}` : ''}</span>
+      </div>
       <div class="fin-top">
         <div class="runway-box px-frame rb-${rb.cls}">
           <span class="rb-label">Runway 现金跑道</span>
@@ -107,18 +149,18 @@ function register(el: HTMLElement, ctx: UiCtx): void {
       </div>
       <div class="fin-cols">
         <div class="fin-col">
-          <div class="panel-title">// 收入（本月）</div>
-          ${sheet.incomeRows.map(r => sheetRow(r.label, r.value)).join('')}
-          ${sheetRow('月收入合计', sheet.incomeTotal, 'c-gold')}
+          <div class="panel-title">// 收入（本月${s.lastMonthReport ? '，箭头 vs 上月' : ''}）</div>
+          ${sheet.incomeRows.map(r => sheetRowMom(r.label, r.value, arrowOf(r.label))).join('')}
+          ${sheetRowMom('月收入合计', sheet.incomeTotal, arrowOf('月收入合计'), 'c-gold')}
         </div>
         <div class="fin-col">
           <div class="panel-title">// 支出（月度性）</div>
-          ${sheet.expenseRows.map(r => sheetRow(r.label, r.value)).join('')}
+          ${sheet.expenseRows.map(r => sheetRowMom(r.label, r.value, arrowOf(r.label))).join('')}
           ${sheetRow('月支出合计（预估）', sheet.expenseTotal, 'c-red')}
         </div>
         <div class="fin-col">
           <div class="panel-title">// 净额与税</div>
-          ${sheetRow('月净额（预估）', sheet.profit, sheet.profit >= 0 ? 'c-green' : 'c-red')}
+          ${sheetRowMom('月净额（预估）', sheet.profit, arrowOf('月净额（预估）'), sheet.profit >= 0 ? 'c-green' : 'c-red')}
           ${sheetRow(`税（${(sheet.taxRate * 100).toFixed(0)}% 档）`, sheet.tax, 'c-orange')}
           ${sheet.grayTax ? '<p class="s7-hint c-red">⚠ 灰色税态：无主体/不报税——稽查权重上升，合规走低。</p>' : ''}
         </div>
@@ -137,6 +179,6 @@ function register(el: HTMLElement, ctx: UiCtx): void {
 
 registerView({
   id: 'finance',
-  deps: ['cash', 'debt', 'runway', 'monthlyIncome', 'projects', 'entity', 'flags'],
+  deps: ['cash', 'debt', 'runway', 'monthlyIncome', 'projects', 'entity', 'flags', 'dailyFlow', 'lastMonthReport'],
   render: register
 });

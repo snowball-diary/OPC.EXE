@@ -75,9 +75,9 @@ const byId = new Map(EVENT_DEFS.map(d => [d.id, d]));
 // ============================================================
 
 describe('S5 数据总量', () => {
-  it('EVENT_DEFS 恰 80 条，id 无重复，findEventDef 可查', () => {
-    expect(EVENT_DEFS.length).toBe(80);
-    expect(new Set(EVENT_DEFS.map(d => d.id)).size).toBe(80);
+  it('EVENT_DEFS 恰 81 条（[v0.10/W9] +作者彩蛋 egg-laijiacheng-site），id 无重复，findEventDef 可查', () => {
+    expect(EVENT_DEFS.length).toBe(81);
+    expect(new Set(EVENT_DEFS.map(d => d.id)).size).toBe(81);
     for (const d of EVENT_DEFS) expect(findEventDef(d.id)).toBe(d);
     expect(findEventDef('definitely-not-exist')).toBeUndefined();
   });

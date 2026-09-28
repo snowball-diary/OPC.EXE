@@ -35,3 +35,17 @@ export const ASSET_RET: Record<'fund' | 'bond' | 'indexFund' | 'stock' | 'crypto
   crypto: [0.02, 0.36],
   realEstate: [0.004, 0.02]
 };
+
+/**
+ * [v0.10/W2] 日波动率（金融 Tab「今日盈亏」与市值路径用）：
+ * 货基 0.01%/日、债 0.03%、指数 0.08%、个股 0.35%、加密 2.2%、房产 0.02%（月租已折进日漂移）。
+ * 日漂移 = ASSET_RET 月期望 / 30；市值每日浮动累积，卖出才落袋为现金。
+ */
+export const ASSET_DAILY_VOL: Record<'fund' | 'bond' | 'indexFund' | 'stock' | 'crypto' | 'realEstate', number> = {
+  fund: 0.0001,
+  bond: 0.0003,
+  indexFund: 0.0008,
+  stock: 0.0035,
+  crypto: 0.022,
+  realEstate: 0.0002
+};
