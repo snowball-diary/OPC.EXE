@@ -1,6 +1,6 @@
 # OPC.EXE
 
-![version](https://img.shields.io/badge/version-v0.10-4ecdc4) ![tests](https://img.shields.io/badge/tests-237%20passed-7bf1a8)
+![version](https://img.shields.io/badge/version-v0.11-4ecdc4) ![tests](https://img.shields.io/badge/tests-237%20passed-7bf1a8)
 
 > 一人公司物语 · 人生操作系统 —— 一款放在 GitHub Pages 上的纯前端像素风经营沙盒。
 > 你同时经营两样东西：**一家一人公司，和你自己这台机器**。
@@ -36,7 +36,7 @@ npm test           # 196 项测试
 npm run sim        # 平衡模拟器（8 策略机器人 × 150+ 局，约 30 秒）
 ```
 
-技术栈：Vite + TypeScript（strict）+ 零运行时依赖 + 全代码像素（无任何图片/AI 生成素材）+ seeded RNG（同种子同命运流）。
+技术栈：Vite + TypeScript（strict）+ 零运行时依赖 + 全代码像素（美术无任何图片/AI 生成素材）+ 自作曲 BGM（纯代码作曲管线，五首场景配乐无缝循环）+ seeded RNG（同种子同命运流）。
 
 > 代码注释中的「技术文档 §N / 设计方案 §N」为开发期内部设计文档的章节引用，文档本身不随本仓库发布。
 
@@ -46,11 +46,16 @@ npm run sim        # 平衡模拟器（8 策略机器人 × 150+ 局，约 30 �
 
 ## 版权与许可
 
-- 本仓库全部原创内容（源代码、代码绘制的像素美术、文案、数值设计）版权归 **赖嘉诚 (Lai Jiacheng)** 所有，保留一切权利。详见 [LICENSE](./LICENSE)。
+- 本仓库全部原创内容（源代码、代码绘制的像素美术、自作曲音频、文案、数值设计）版权归 **赖嘉诚 (Lai Jiacheng)** 所有，保留一切权利。详见 [LICENSE](./LICENSE)。
 - 字体 "Press Start 2P" 采用 SIL Open Font License 1.1 授权（经 @fontsource 打包），其许可独立且允许再分发。
 - 游戏内提及的现实名称（平台、人物、产品）仅作描述性指代，与任何现实主体无关联；游戏内容不构成任何现实建议。
 
 ## 更新日志
+
+### v0.11（2026-10-03）
+
+- **自作曲 BGM 五首上线**：标题《开机声》/白天《运转一日》/夜晚《深夜收档》/好结局《把自己还给生活》/坏结局《灰屏》——随昼夜相位与结局自动切换，可随顶栏喇叭一键静音
+- 全部纯代码作曲（Python 生成 MIDI + 开源 SoundFont 渲染），游戏内采样级无缝循环；版权信息（原创声明范围）含全部音频
 
 ### v0.10（2026-09-28）
 
