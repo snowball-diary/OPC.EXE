@@ -125,6 +125,21 @@ function init(): void {
   window.addEventListener('keydown', unlock, { once: true });
 }
 
+// ---- 静音联动 + 共享上下文（BGM 模块挂载点，bgm.ts 注册） ----
+
+type MuteListener = (m: boolean) => void;
+let muteListener: MuteListener | null = null;
+
+/** 外部音频模块注册静音联动（setMuted/toggleMuted 时回调） */
+export function onMuteChange(fn: MuteListener): void {
+  muteListener = fn;
+}
+
+/** 共享 AudioContext（未解锁时 null）：BGM 与音效共用一个时钟 */
+export function sharedCtx(): AudioContext | null {
+  return ensureAc();
+}
+
 export const SFX = {
   muted: false,
   init,
@@ -149,6 +164,7 @@ export const SFX = {
   setMuted(m: boolean): void {
     SFX.muted = m;
     if (m) setHum(false);
+    muteListener?.(m);
   },
   toggleMuted(): boolean {
     SFX.setMuted(!SFX.muted);

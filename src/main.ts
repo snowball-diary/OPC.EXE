@@ -12,7 +12,9 @@ import {
 import { apMaxFor } from './core/health';
 import { ACTION_DEFS } from './data/actions.def';
 import { findEventDef } from './data/events.def';
+import { findEnding } from './data/endings.def';
 import { canContinueFromSlot, loadSlot, saveToSlot } from './save/save';
+import { BGM } from './ui/bgm';
 import { renderEndingScreen } from './ui/ending';
 import { bindFloatLayer, capFloats, FLOAT_MAX, floatText } from './ui/float';
 import {
@@ -70,6 +72,8 @@ function refreshUi(): void {
   if (pb) pb.textContent = ['白 天', '午 后', '黄 昏', '深 夜'][dayPhaseOf(s.ap, apMax)] ?? '白 天';
   const ab = document.getElementById('ap-badge');
   if (ab) ab.textContent = `AP ${s.ap}/${apMax}`;
+  // BGM 昼夜相（相 0/1=白天曲 2/3=夜曲；终局后交给结局曲，勿抢）
+  if (!s.meta.over) BGM.play(dayPhaseOf(s.ap, apMax) >= 2 ? 'night' : 'day');
   renderTopbar(s, extraNews);
   renderAll();
   renderBottombar();
@@ -130,6 +134,7 @@ function showTitle(): void {
   provideCtx(null);
   setGame(null);
   document.body.className = '';
+  BGM.play('title'); // 标题曲（自动播放策略：首次交互后真正出声）
   if (!app) return;
   // [v0.10/W5] 有档 **且** 未终局才可继续：终局后 auto 槽已清（或残留旧终局档）→ 禁用并说明
   const cont = canContinueFromSlot(loadSlot('auto'));
@@ -137,7 +142,7 @@ function showTitle(): void {
     <section id="screen-title" class="screen active">
       <div class="game-logo">OPC.exe<span class="cursor"></span></div>
       <div class="game-sub">一人公司物语 · 人生操作系统</div>
-      <div class="version-tag">one-person-company os · 全代码像素 · 零素材 · build by 赖嘉诚</div>
+      <div class="version-tag">one-person-company os · 全代码像素 · 零素材美术 · 自作曲 BGM · build by 赖嘉诚</div>
       <div class="title-author">by 赖嘉诚 · <a href="https://laijiacheng.com" target="_blank" rel="noopener">laijiacheng.com</a></div>
       <div class="title-tip px-frame">
         <p>&gt; 你是一人公司的全部：唯一的员工、唯一的资产、唯一的风险敞口。</p>
@@ -309,10 +314,16 @@ function onEndDay(): void {
 // ---------- 结局屏（S7：五维人生报告在 src/ui/ending.ts，签名不变） ----------
 
 function showEnding(key: string): void {
+  // 结局曲分流：金/紫=好结局曲；坏/体面=坏结局曲；粉（圣人或奸商）按道德档分流
+  const def = findEnding(key);
+  const good = def ? def.color === 'gold' || def.color === 'purple'
+    || (def.color === 'pink' && (getGame()?.state.morality ?? 50) >= 50) : false;
+  BGM.play(good ? 'good' : 'bad');
   renderEndingScreen(key);
 }
 
 // ---------- 启动 ----------
 
 SFX.init();
+BGM.init();
 showTitle();
