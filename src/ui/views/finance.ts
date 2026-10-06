@@ -130,7 +130,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
     <div class="fin-view">
       ${s.runway < 3 && s.runway >= 0 ? `<div class="runway-alert px-frame">⚠ 跑道不足 3 个月（当前 ${s.runway}）：现金 ${yuan(Math.round(s.cash))} ÷ 月净支出 ${yuan(sheet.expenseTotal)}。增收、砍支、或去接单——跑道归零的那天，前景不会替你交房租。</div>` : ''}
       <div class="fin-flow px-frame">
-        <span class="rb-label">今日净流（[v0.10] 日结口径）</span>
+        <span class="rb-label">今日净流（日结口径）</span>
         <b class="px-num ${net >= 0 ? 'c-green' : 'c-red'}">${net >= 0 ? '+' : ''}${yuan(Math.round(net))}</b>
         <span class="dim-line">项目 +${numFmt(s.dailyFlow.projIn)} · 被动 +${numFmt(s.dailyFlow.passiveIn)} · 服务 +${numFmt(s.dailyFlow.serviceIn)} · 生活 -${numFmt(s.dailyFlow.livingOut)} · 订阅 -${numFmt(s.dailyFlow.subsOut)} · Token -${numFmt(s.dailyFlow.tokenOut)} · 其他 -${numFmt(s.dailyFlow.otherOut)}${lastNet !== null ? `　·　昨日 ${lastNet >= 0 ? '+' : ''}${yuan(lastNet)}` : ''}</span>
       </div>

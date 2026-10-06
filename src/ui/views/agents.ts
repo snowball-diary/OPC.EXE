@@ -80,7 +80,7 @@ function agentCard(def: (typeof AGENT_DEFS)[number], s: StateSlice): string {
 function tokenPanelHtml(s: StateSlice): string {
   const pi = priceIndexLabel(s.tokenBill.priceIndex);
   return `
-    <div class="panel-title">// Token 账单（[v0.10] 日结口径）</div>
+    <div class="panel-title">// Token 账单（日结口径）</div>
     <div class="token-panel">
       <div class="kv-grid">
         <div class="kv"><span>昨日 Token</span><b class="c-gold">${yuan(Math.round(s.tokenBill.yesterday))}</b></div>

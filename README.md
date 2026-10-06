@@ -1,6 +1,6 @@
 # OPC.EXE
 
-![version](https://img.shields.io/badge/version-v0.11-4ecdc4) ![tests](https://img.shields.io/badge/tests-237%20passed-7bf1a8)
+![version](https://img.shields.io/badge/version-V1.0-4ecdc4) ![tests](https://img.shields.io/badge/tests-237%20passed-7bf1a8)
 
 > 一人公司物语 · 人生操作系统 —— 一款放在 GitHub Pages 上的纯前端像素风经营沙盒。
 > 你同时经营两样东西：**一家一人公司，和你自己这台机器**。
@@ -51,6 +51,9 @@ npm run sim        # 平衡模拟器（8 策略机器人 × 150+ 局，约 30 �
 - 游戏内提及的现实名称（平台、人物、产品）仅作描述性指代，与任何现实主体无关联；游戏内容不构成任何现实建议。
 
 ## 更新日志
+
+### V1.0（2026-10-06 · 正式发布版）
+- 版本号自 v0.11 规范化为 V1.0，功能内容同 v0.11。
 
 ### v0.11（2026-10-03）
 

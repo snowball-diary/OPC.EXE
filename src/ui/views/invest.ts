@@ -94,7 +94,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
         <button class="px-btn" id="tv-funding">借款（本息 ×1.05，需信用≥400）</button>
         <button class="px-btn" id="tv-insurance">投保（部分事故兜底）</button>
       </div>
-      <p class="s7-hint">[v0.10] 市值每日按波动率重估（货基 0.01%/日、债 0.03%、指数 0.08%、个股 0.35%、加密 2.2%、房产 0.02%+月租日折算）——浮动盈亏只记账，<b>卖出才落袋为现金</b>。加密心脏也是成本。</p>
+      <p class="s7-hint">市值每日按波动率重估（货基 0.01%/日、债 0.03%、指数 0.08%、个股 0.35%、加密 2.2%、房产 0.02%+月租日折算）——浮动盈亏只记账，<b>卖出才落袋为现金</b>。加密心脏也是成本。</p>
     </div>`;
 
   el.querySelector<HTMLButtonElement>('#btn-crypto')?.addEventListener('click', () => {
