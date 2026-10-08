@@ -304,7 +304,7 @@ export function advanceDay(s: StateSlice, rng: Rng): DayReport {
   // 必须在「明晨 day+1」之前写入：否则 pushLog 盖 day+1 戳，
   // 玩家日志面板会看到「第 2 天 · 第 1 天结束：…」（样张实证），第 1 天的总结则凭空消失。
   const net = dailyNet(s.dailyFlow);
-  track(`第 ${day} 天结束：现金 ¥${Math.round(s.cash)}｜今日净流 ${net >= 0 ? '+' : ''}¥${Math.round(net)}｜精力 ${Math.round(s.energy)}｜健康 ${Math.round(composeHealth(s.health))}${s.decisionMode !== 'system2' ? '｜⚠ System1' : ''}`);
+  track(`第 ${day} 天结束：现金 ¥${Math.round(s.cash)}｜今日净流 ${net >= 0 ? '+' : ''}¥${Math.round(net)}｜精力 ${Math.round(s.energy)}｜健康 ${Math.round(composeHealth(s.health))}${s.decisionMode !== 'system2' ? '｜! System1' : ''}`);
 
   // 成就检查：新解锁写入日志（gold；flags 记账在 checkAchievements 内）
   const newAch = checkAchievements(s);

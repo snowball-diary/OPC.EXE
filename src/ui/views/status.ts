@@ -156,7 +156,7 @@ function bodyHtml(s: Readonly<StateSlice>): string {
     ${subBarRow('情绪 ×25%', h.mood.v, h.mood.drift)}
     ${subBarRow('饮食 ×20%', h.diet.v, h.diet.drift)}
     ${subBarRow('运动 ×15%', h.exercise.v, h.exercise.drift)}
-    ${hints.length > 0 ? `<div class="health-hints">${hints.map(x => `<p class="s7-hint c-orange">⚠ ${escapeHtml(x.text)}</p>`).join('')}</div>` : ''}
+    ${hints.length > 0 ? `<div class="health-hints">${hints.map(x => `<p class="s7-hint c-orange">! ${escapeHtml(x.text)}</p>`).join('')}</div>` : ''}
     <div class="fatigue-line ${fr.precise ? '' : 'dim'}">
       隐性疲劳 <b class="${hfCls(h.hiddenFatigue, fr.precise)}">${fr.text}</b>
       ${fr.precise ? `　猝死风险 <b class="c-red">${pct(fr.riskPct)}</b>（公式 0.03+0.02×(hf-85)/5+0.03×硬撑天）` : '　<span class="c-dim">做一次体检（¥500）解锁精确读数</span>'}

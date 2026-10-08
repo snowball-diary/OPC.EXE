@@ -71,7 +71,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
           <div class="kv"><span>私域化率</span><b class="${rate > 0 ? 'c-green' : 'c-red'}">${pct(rate * 100)}</b></div>
           <div class="kv"><span>粉丝峰值</span><b>${numFmt(s.stats.followersPeak)}</b></div>
         </div>
-        ${dep ? `<div class="dep-warn">⚠ 单平台依赖警戒：「${PLATFORM_DEFS.find(p => p.id === dep)?.name ?? dep}」收入占比 &gt;60%——该平台风控事件概率 ×3。鸡蛋别放一个篮子里，沉淀私域。</div>` : ''}
+        ${dep ? `<div class="dep-warn">! 单平台依赖警戒：「${PLATFORM_DEFS.find(p => p.id === dep)?.name ?? dep}」收入占比 &gt;60%——该平台风控事件概率 ×3。鸡蛋别放一个篮子里，沉淀私域。</div>` : ''}
       </div>
       <div class="panel-title">// 联系人（${s.contacts.length}）</div>
       <div class="ct-list">${s.contacts.length === 0 ? '<p class="s7-hint">通讯录是空的。参加社群、商务合作、社交养关系都会往这里加人——关系是最早的护城河。</p>' : s.contacts.map(c => contactRow(c, s.meta.day)).join('')}</div>

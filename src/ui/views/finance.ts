@@ -128,7 +128,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
   const arrowOf = (label: string): { text: string; cls: string } => arrows.find(a => a.label === label)?.arrow ?? { text: '', cls: '' };
   el.innerHTML = `
     <div class="fin-view">
-      ${s.runway < 3 && s.runway >= 0 ? `<div class="runway-alert px-frame">⚠ 跑道不足 3 个月（当前 ${s.runway}）：现金 ${yuan(Math.round(s.cash))} ÷ 月净支出 ${yuan(sheet.expenseTotal)}。增收、砍支、或去接单——跑道归零的那天，前景不会替你交房租。</div>` : ''}
+      ${s.runway < 3 && s.runway >= 0 ? `<div class="runway-alert px-frame">! 跑道不足 3 个月（当前 ${s.runway}）：现金 ${yuan(Math.round(s.cash))} ÷ 月净支出 ${yuan(sheet.expenseTotal)}。增收、砍支、或去接单——跑道归零的那天，前景不会替你交房租。</div>` : ''}
       <div class="fin-flow px-frame">
         <span class="rb-label">今日净流（日结口径）</span>
         <b class="px-num ${net >= 0 ? 'c-green' : 'c-red'}">${net >= 0 ? '+' : ''}${yuan(Math.round(net))}</b>
@@ -162,7 +162,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
           <div class="panel-title">// 净额与税</div>
           ${sheetRowMom('月净额（预估）', sheet.profit, arrowOf('月净额（预估）'), sheet.profit >= 0 ? 'c-green' : 'c-red')}
           ${sheetRow(`税（${(sheet.taxRate * 100).toFixed(0)}% 档）`, sheet.tax, 'c-orange')}
-          ${sheet.grayTax ? '<p class="s7-hint c-red">⚠ 灰色税态：无主体/不报税——稽查权重上升，合规走低。</p>' : ''}
+          ${sheet.grayTax ? '<p class="s7-hint c-red">! 灰色税态：无主体/不报税——稽查权重上升，合规走低。</p>' : ''}
         </div>
       </div>
       <div class="panel-title">// 资产负债</div>

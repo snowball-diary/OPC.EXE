@@ -191,5 +191,5 @@ export function renderTopbar(s: Readonly<StateSlice>, extraTicker: readonly { da
 /** 疲劳横幅（level2 黑底红字闪烁） */
 export function fatigueBannerHtml(f: FatigueModel): string {
   const risk = f.riskPct > 0 ? `　◆　当前风险 ${f.riskPct}%` : '';
-  return `<div id="fatigue-banner" class="fatigue-banner level${f.level}">⚠ ${f.text}${risk}</div>`;
+  return `<div id="fatigue-banner" class="fatigue-banner level${f.level}">! ${f.text}${risk}</div>`;
 }

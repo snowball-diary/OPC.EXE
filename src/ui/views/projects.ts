@@ -141,7 +141,7 @@ function projectCard(p: Project, s: StateSlice): string {
           <span>平台费 <b>${pct(ue.feeRate * 100)}</b></span>
           <span>毛利率 <b class="c-${band.cls}">${pct(ue.grossMargin * 100)}（${band.label}）</b></span>
         </div>
-        <div class="ue-note ${ue.overTrustCapacity ? 'c-red' : 'dim-line'}">${ue.overTrustCapacity ? '⚠ ' + ue.scaleCapNote : ue.scaleCapNote}</div>
+        <div class="ue-note ${ue.overTrustCapacity ? 'c-red' : 'dim-line'}">${ue.overTrustCapacity ? '! ' + ue.scaleCapNote : ue.scaleCapNote}</div>
       </div>` : ''}
       ${p.gray && p.alive ? `
       <div class="gray-risk">
