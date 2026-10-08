@@ -1,4 +1,4 @@
-// 金融视图（S7，stage≥5 由 Tab 门控）：组合六格（份额与期望损益）+ 买卖/借款/还款/投保
+// 金融视图（stage≥5 门控）：组合六格（份额与期望损益）+ 买卖/借款/还款/投保
 // + 经济周期相位 + 加密资产开关（关闭时置灰：已关闭（真实世界仍在继续））。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
@@ -7,7 +7,7 @@ import { ASSET_RET, PHASE_ORDER_MULT } from '../../data/economy.def';
 import { yuan } from '../fmt';
 import { enqueueNotice, processQueue } from '../modal';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
 export type InvestKind = 'save' | 'fund' | 'bond' | 'indexFund' | 'stock' | 'crypto' | 'realEstate';
 
@@ -103,7 +103,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
   const trade = (sign: 1 | -1): void => {
     const kind = el.querySelector<HTMLSelectElement>('#tv-kind')?.value as InvestKind | undefined;
     const raw = Number(el.querySelector<HTMLInputElement>('#tv-amount')?.value ?? 0);
-    // [S8] 修死按钮：金额无效时不再静默无反馈
+    // 修死按钮：金额无效时不再静默无反馈
     if (!kind || !Number.isFinite(raw) || raw <= 0) {
       enqueueNotice('交易台', '请先输入大于 0 的金额。', 'bad');
       processQueue();

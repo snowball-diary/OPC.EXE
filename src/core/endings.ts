@@ -1,4 +1,4 @@
-// 结局判定 + 五维人生报告（技术文档 §十二 / 设计 §十二）
+// 结局判定 + 五维人生报告
 import { ENDING_DEFS, netWorth } from '../data/endings.def';
 import { composeHealth } from './health';
 import { pushLog } from './state';

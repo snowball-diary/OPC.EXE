@@ -1,4 +1,4 @@
-// 运行时容器（S6）：模块级单例，持有当前 Game 与 UI 专属 RNG。
+// 运行时容器：模块级单例，持有当前 Game 与 UI 专属 RNG。
 // 纪律：core 是唯一写者，UI 只经 dispatch/advanceDay 触碰状态。
 import type { Game } from '../core/index';
 import { createRng, type Rng } from '../core/index';

@@ -1,9 +1,9 @@
-// KP 词条「已见」记录（S7 建立，S8 持久化改造）：
-// [S8] 「已读」不再存会话级内存，而是经 core/state.grantKp 落 state.flags['kp_'+key]
+// KP 词条「已见」记录：
+// 「已读」不再存会话级内存，而是经 core/state.grantKp 落 state.flags['kp_'+key]
 //      ——存档天然携带，刷新/读档后图鉴点亮不丢。
 // 记录两个来源：①core 引擎投递（事件入队 → pending.kpQueue → main.ts 弹窗）
 //              ②图鉴页主动展开全文（codex 视图点击，只记账不入队，避免重复弹窗）。
-// kpKeyFromTitle / kpKeyFromLog 纯函数保留（tests/s7.test.ts 覆盖）。
+// kpKeyFromTitle / kpKeyFromLog 纯函数保留（tests/views.test.ts 覆盖）。
 import { grantKp } from '../core/index';
 import { KP_DEFS } from '../data/kp.def';
 import { getGame } from './runtime';
@@ -48,7 +48,7 @@ export function kpKeyFromLog(text: string): string | undefined {
 
 let watching = false;
 
-/** 监听 S6 弹窗的 #modal-kp：内容一填充即视为「已读」（经 flags 持久记账） */
+/** 监听弹窗的 #modal-kp：内容一填充即视为「已读」（经 flags 持久记账） */
 export function watchKpModal(): void {
   if (watching) return;
   watching = true;

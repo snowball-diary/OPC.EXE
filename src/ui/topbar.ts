@@ -1,4 +1,4 @@
-// 顶栏（S6）：第 N 天/年 · OS 版本（stage 映射）· 现金（负债红）· 精力条 · AP ·
+// 顶栏：第 N 天/年 · OS 版本（stage 映射）· 现金（负债红）· 精力条 · AP ·
 // 注意力 · 压力 · 经济周期 · 新闻条（NEWS_TICKER 当天及 3 日内）· 疲劳横幅 · 静音。
 // 数据组装抽成纯函数（makeTopbarModel / pickNews / makeFatigueModel / stageVersion）供单测。
 
@@ -11,7 +11,7 @@ import { SFX } from './sfx';
 import { iconHtml } from './icons';
 import { enqueueNotice, processQueue } from './modal';
 
-// ---------- 纯函数（tests/s6.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/ui-shell.test.ts 覆盖） ----------
 
 export const PHASE_LABELS: Record<EconomyPhase, string> = {
   boom: '繁荣',
@@ -29,9 +29,9 @@ export function stageVersion(stage: Stage): string {
 }
 
 /**
- * 新闻条（纯函数，[v0.10/W6] 每日轮换一条）：
+ * 新闻条（纯函数，每日轮换一条）：
  * 池 = day 及之前发布的全部条目（按 day 升序）。day1 只显锚点。
- * [v0.10/体感修复] 旧版 pool[(day-1)%len] 在池扩容日模数跳变，会同一条新闻连挂两天
+ * 旧版 pool[(day-1)%len] 在池扩容日模数跳变，会同一条新闻连挂两天
  * （90 天实测撞 3 次）；且只修模数还会把撞车转嫁到次日。改为「游标逐日 +1、按当日池长取模」：
  * 任意相邻两天必然不同条，池稳定时每 len 天完整轮换一圈。day<1 或空池返回 []。
  */
@@ -49,7 +49,7 @@ export function pickNews(ticker: readonly { day: number; text: string }[], day: 
 }
 
 /**
- * 近 N 日新闻列表（纯函数，[v0.10/W6]）：发布日落入 (day-N, day] 窗口的条目，新的在前。
+ * 近 N 日新闻列表（纯函数，）：发布日落入 (day-N, day] 窗口的条目，新的在前。
  * 点击顶栏新闻条 → 弹窗展示完整文案 + 这份列表。
  */
 export function newsHistory(ticker: readonly { day: number; text: string }[], day: number, n = 7): { day: number; text: string }[] {
@@ -62,7 +62,7 @@ export function newsHistory(ticker: readonly { day: number; text: string }[], da
 export interface FatigueModel {
   level: 1 | 2;
   text: string;
-  riskPct: number; // suddenDeathRisk 百分比（前置不满足恒 0，§7.3 公开显示）
+  riskPct: number; // suddenDeathRisk 百分比（前置不满足恒 0，公开显示）
 }
 
 /** 双强预警横幅模型（纯函数）：fatigueWarning 非空才显示 */
@@ -115,7 +115,7 @@ export function makeTopbarModel(
     version: stageVersion(s.meta.stage),
     cash: s.cash,
     cashNegative: s.cash < 0,
-    // [v0.10/W8] 修复负数格式：-¥500（此前会渲染成 ¥-500）
+    // 修复负数格式：-¥500（此前会渲染成 ¥-500）
     cashText: `${s.cash < 0 ? '-' : ''}¥${Math.round(Math.abs(s.cash)).toLocaleString('en-US')}${s.debt > 0 ? `（负债 ¥${Math.round(s.debt).toLocaleString('en-US')}）` : ''}`,
     energy: s.energy,
     ap: s.ap,
@@ -125,7 +125,7 @@ export function makeTopbarModel(
     phase: s.economyPhase,
     phaseLabel: PHASE_LABELS[s.economyPhase] ?? '—',
     decisionMode: s.decisionMode,
-    // [v0.10/W6] 当日预警（DayReport.news）置顶 + 每日轮换一条 NEWS_TICKER
+    // 当日预警（DayReport.news）置顶 + 每日轮换一条 NEWS_TICKER
     news: [
       ...extraTicker.filter(e => e.day === s.meta.day).map(e => e.text),
       ...pickNews(NEWS_TICKER, s.meta.day)
@@ -154,7 +154,7 @@ export function renderTopbar(s: Readonly<StateSlice>, extraTicker: readonly { da
   if (!el) return;
   const m = makeTopbarModel(s, extraTicker);
   const newsText = m.news.length > 0 ? m.news.join('　◆　') : '一人公司广播：今天没有头条，把今天过好。';
-  // [v0.10/W2] 现金 hover 显示今日净流（财务 Tab 首行为完整分项版）
+  // 现金 hover 显示今日净流（财务 Tab 首行为完整分项版）
   const net = dailyNet(s.dailyFlow);
   const lastNet = typeof s.flags.lastDayNet === 'number' ? s.flags.lastDayNet : null;
   const cashTitle = `今日净流 ${net >= 0 ? '+' : ''}¥${Math.round(net).toLocaleString('en-US')}${lastNet !== null ? ` · 昨日 ${lastNet >= 0 ? '+' : ''}¥${lastNet.toLocaleString('en-US')}` : ''}（详情见财务 Tab）`;
@@ -176,7 +176,7 @@ export function renderTopbar(s: Readonly<StateSlice>, extraTicker: readonly { da
     SFX.toggleMuted();
     renderTopbar(s);
   });
-  // [v0.10/W6] 点击新闻条 → 完整文案 + 近 7 日新闻列表（复用 Notice 弹窗）
+  // 点击新闻条 → 完整文案 + 近 7 日新闻列表（复用 Notice 弹窗）
   const tickerBtn = el.querySelector<HTMLDivElement>('.news-ticker');
   tickerBtn?.addEventListener('click', () => {
     SFX.click();

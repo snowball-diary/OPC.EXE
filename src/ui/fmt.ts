@@ -1,14 +1,14 @@
-// S7 共享格式化与纯函数工具：数字统一 ¥ 千分位 / 日志颜色映射 / 特殊日志识别。
-// 全部纯函数（无 DOM），tests/s7.test.ts 直接覆盖。
+// 共享格式化与纯函数工具：数字统一 ¥ 千分位 / 日志颜色映射 / 特殊日志识别。
+// 全部纯函数（无 DOM），tests/views.test.ts 直接覆盖。
 import type { LogEntry, StateSlice } from '../core/types';
 
-/** 千分位数字（与 S6 顶栏口径一致：en-US 分组） */
+/** 千分位数字（与顶栏同口径：en-US 分组） */
 export function numFmt(n: number): string {
   return Math.round(n).toLocaleString('en-US');
 }
 
 /**
- * [v0.10/W8] 事件弹窗 body 变量插值（纯函数）：
+ * 事件弹窗 body 变量插值（纯函数）：
  * {cash} 现金 / {followers} 粉丝峰值 / {day} {month} 日期 / {runway} 跑道 /
  * {energy} {stress} 身心读数 / {mrr} 在营项目 MRR 合计——叙事里嵌实时数字。
  */

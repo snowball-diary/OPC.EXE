@@ -1,4 +1,4 @@
-// 行动视图（S7）：输入/输出/经营/身心四组行动卡（AP/精力/现金/禁用原因）
+// 行动视图：输入/输出/经营/身心四组行动卡（AP/精力/现金/禁用原因）
 // + 深度学习三档（i+1 规则）弹层 + 内容营销卡平台选择（一鱼八走 distributeContent）
 // + 经营组实体状态条（主体/商标/ICP/定价）。
 import type { UiCtx } from '../registry';
@@ -11,7 +11,7 @@ import { escapeHtml, yuan } from '../fmt';
 import { getRng } from '../runtime';
 import { SFX } from '../sfx';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
 export const CAT_LABELS: Record<ActionDef['cat'], string> = {
   input: '输入（学）', output: '输出（做）', biz: '经营（管）', self: '身心（修）'
@@ -143,7 +143,7 @@ function openPlatformPicker(ctx: UiCtx): void {
     b.addEventListener('click', () => {
       const pid = b.dataset.plat ?? '';
       overlay.remove();
-      // [S8] 修「瀑布源头不涨粉」：选定的主阵地即官方管线首发平台（Action.platformId），
+      // 修「瀑布源头不涨粉」：选定的主阵地即官方管线首发平台（Action.platformId），
       // 之后一鱼八吃向其余平台瀑布分发——源头平台自己吃到大爆抽样，不再是只出不进的纯管道
       ensureAccount(ctx.state, pid);
       const r = ctx.dispatch({ t: 'act', id: 'writeContent', platformId: pid });

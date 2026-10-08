@@ -1,8 +1,8 @@
-// 像素图标库（S6 自原型「一人公司物语-增强版.html」移植 + 修正 + 扩充）
+// 像素图标库（自原型「一人公司物语-增强版.html」移植 + 修正 + 扩充）
 // 全代码像素路线：零图片资产。8×8 字符画，drawIcon 到 canvas。
 //
 // 调色板字符：k 黑 / w 白 / y 金 / g 绿 / r 红 / b 青 / o 橙 / p 紫 / s 灰紫 / f 粉
-// （原型 heart 用了 'pink' 三字符导致 PAL['i']/PAL['n'] 落白，S6 修正为单字符 'f'）
+// （原型 heart 用了 'pink' 三字符导致 PAL['i']/PAL['n'] 落白，后修正为单字符 'f'）
 export const PAL: Record<string, string> = {
   k: '#1a1c2c',
   w: '#f4f4f4',
@@ -36,7 +36,7 @@ export const ICONS: Record<string, string[]> = {
   code: ['........', '.kk..kk.', '..kwkw..', '.kwwwwwk', 'kwkwkwkk', '.kwwwwwk', '..kwkw..', '.kk..kk.'],
   pen: ['.....kk.', '....kyk.', '...kyyk.', '..kyyk..', '.kwyk...', '.kwk....', 'kwk.....', 'kk......'],
   heart: ['.kk..kk.', 'kffkkffk', 'kffffffk', 'kffffffk', '.kffffk.', '..kffk..', '...kk...', '........'],
-  // ---- S6 新增 ----
+  // ---- 扩充 ----
   news: ['kkkkkkkk', 'kyyyyyyk', 'kwwwwwwk', 'kwsswssk', 'kwwwwwwk', 'kwssswsk', 'kwwwwwwk', 'kkkkkkkk'],
   snd: ['...kk...', '..kwk..b', '.kwwk.b.', 'kwwwkb.b', 'kwwwkb.b', '.kwwk.b.', '..kwk..b', '...kk...'],
   mute: ['...kk...', '..kwkr.r', '.kwwk.r.', 'kwwwkr.r', 'kwwwk.r.', '.kwwkr.r', '..kwk...', '...kk...'],
@@ -44,7 +44,7 @@ export const ICONS: Record<string, string[]> = {
   moon: ['..kkk...', '.kwwsk..', 'kwsskk..', 'kwskk...', 'kwskk...', 'kwsskk..', '.kwwsk..', '..kkk...']
 };
 
-/** UI 各模块引用到的 icon key（tests/s6.test.ts 校验完整性） */
+/** UI 各模块引用到的 icon key（tests/ui-shell.test.ts 校验完整性） */
 export const REQUIRED_ICON_KEYS: string[] = [
   'coin', 'bolt', 'heart', 'cal', 'gear', 'users', 'star', 'note', 'msg', 'flag',
   'book', 'code', 'pen', 'mega', 'hammer', 'box', 'cup', 'wrench', 'news', 'snd', 'mute', 'bot', 'moon'

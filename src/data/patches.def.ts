@@ -1,4 +1,4 @@
-// OS 补丁数据：24 条四层各 6（技术文档 §5.2/设计 §2.5）——安装成本+月维护+行为记账 flag
+// OS 补丁数据：24 条四层各 6——安装成本+月维护+行为记账 flag
 // effectFlags：当日判定补丁「被执行」的 flag 清单（os.ts 的 FLAG_CHECKS 解释；空 = 有任意行动即算）
 import type { OSRuleDef } from '../core/types';
 

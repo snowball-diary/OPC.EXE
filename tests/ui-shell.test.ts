@@ -1,4 +1,4 @@
-// S6 验收测试：UI 壳层纯逻辑（无 DOM 依赖，vitest node 环境）
+// UI 壳层测试：（无 DOM 依赖，vitest node 环境）
 // 覆盖：icons 完整性 / sfx 乐谱 / float 上限 / registry 注册与门控 /
 //       modal 队列优先级 / topbar 模型与新闻窗口 / 疲劳横幅模型 / scene 映射表
 import { describe, expect, it } from 'vitest';
@@ -127,8 +127,8 @@ describe('registry：注册 / stage 门控 / 占位解析', () => {
     expect(depHit(['cash', 'projects'], ['stress', 'projects'])).toBe(true);
   });
 
-  it('占位/锁定文案生成（S7 接入指引）', () => {
-    expect(tabPlaceholderHtml('finance')).toContain('施工中 · S7');
+  it('占位/锁定文案生成', () => {
+    expect(tabPlaceholderHtml('finance')).toContain('施工中');
     expect(tabPlaceholderHtml('finance')).toContain('finance');
     expect(tabLockedHtml('invest', 2)).toContain('第 5 阶段解锁');
   });
@@ -198,7 +198,7 @@ describe('topbar：makeTopbarModel / stageVersion / pickNews', () => {
     }
   });
 
-  it('[v0.10/W6] NEWS_TICKER 30 条、day1 锚点必出、newsHistory 近 7 日', () => {
+  it('NEWS_TICKER 30 条、day1 锚点必出、newsHistory 近 7 日', () => {
     expect(NEWS_TICKER.length).toBe(30);
     const d1 = pickNews(NEWS_TICKER, 1);
     expect(d1.length).toBe(1);
@@ -223,7 +223,7 @@ describe('topbar：makeTopbarModel / stageVersion / pickNews', () => {
   });
 });
 
-// ---------- 7. 疲劳横幅模型（双强预警 §7.3） ----------
+// ---------- 7. 疲劳横幅模型（双强预警 ） ----------
 
 describe('topbar：makeFatigueModel', () => {
   it('隐性疲劳 <70 且无心悸 → 不显示横幅', () => {

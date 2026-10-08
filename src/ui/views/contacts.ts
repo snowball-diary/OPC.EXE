@@ -1,4 +1,4 @@
-// 人脉视图（S7）：联系人列表（类型徽章/关系值条/lastTouch）+ 粉丝与私域化率
+// 人脉视图：联系人列表（类型徽章/关系值条/lastTouch）+ 粉丝与私域化率
 // + 单平台依赖警告（platformDependency）+ 8 平台账号状态表。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
@@ -8,7 +8,7 @@ import type { Contact, StateSlice } from '../../core/types';
 import { PLATFORM_DEFS } from '../../data/platforms.def';
 import { numFmt, pct, segHtml } from '../fmt';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
 export const CONTACT_TYPE_LABELS: Record<Contact['type'], string> = {
   peer: '同行', client: '客户', mentor: '导师', vendor: '供应商', investor: '投资人'

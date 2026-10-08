@@ -1,4 +1,4 @@
-// 项目类型表：10 基础类型 + 4 个 autoSrv 组内建 = 14 条（技术文档 §5.6/§8.3/§8.6；设计 §四）
+// 项目类型表：10 基础类型 + 4 个 autoSrv 组内建 = 14 条
 // devCost=满进度所需进度点；baseCost=月维护基线；cogsToken=每单 Token 成本（autoSrv/gray>0）
 import type { ProjectType } from '../core/types';
 
@@ -13,7 +13,7 @@ export const PROJECT_TYPES: ProjectType[] = [
   { id: 'publishing', name: '出版物', devCost: 70, baseCost: 80, price: [30, 150], potentialClass: 'content', passiveShare: 0.7, cogsToken: 0, desc: '书/专栏授权：慢，但版税是真的复利。' },
   { id: 'physical', name: '实体产品', devCost: 110, baseCost: 500, price: [50, 500], potentialClass: 'ecom', passiveShare: 0.1, cogsToken: 15, desc: '打样到发货一手包办：现金流生意，库存是暗礁。' },
   { id: 'apiRelay', name: 'Token 中转站', devCost: 50, baseCost: 400, price: [50, 500], potentialClass: 'gray', passiveShare: 0.3, cogsToken: 40, gray: true, desc: '灰产：低价囤额度转卖开发者。毛利高，上游封号即断粮，稽查×2。' },
-  // ---------- autoSrv 组（§8.3 自动化服务，收入=按量，COGS=Token） ----------
+  // ---------- autoSrv 组（自动化服务，收入=按量，COGS=Token） ----------
   { id: 'aiSupport', name: 'AI 客服外包', devCost: 70, baseCost: 300, price: [500, 3000], potentialClass: 'autoSrv', passiveShare: 0.5, cogsToken: 80, desc: '帮中小企业跑 AI 客服：按量收费，Token 是你的进货价。' },
   { id: 'growthAgency', name: '获客代运营', devCost: 80, baseCost: 350, price: [1000, 5000], potentialClass: 'autoSrv', passiveShare: 0.4, cogsToken: 120, desc: 'AI 投放与分发代运营：效果对赌，风控风险在平台侧。' },
   { id: 'agentDev', name: '智能体定制', devCost: 120, baseCost: 300, price: [5000, 30000], potentialClass: 'autoSrv', passiveShare: 0.2, cogsToken: 200, desc: '给公司搭智能体工作流：单价最高，交付最重。' },

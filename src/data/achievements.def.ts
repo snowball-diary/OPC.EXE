@@ -1,4 +1,4 @@
-// 成就表 24 条（S4 内容数据层；check 全部为纯函数：只读状态切片，不写不改）
+// 成就表 24 条（check 全部为纯函数：只读状态切片，不写不改）
 // 解锁记账在 core/achievements.ts（flags['ach_'+id]=true），接线在 time.ts advanceDay 末尾（cls gold 日志）。
 // 口径说明（check 依赖的引擎事实）：
 //  - stats.orders：actions.deliver / agents 自动成单时 +1

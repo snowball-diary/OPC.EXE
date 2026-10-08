@@ -1,4 +1,4 @@
-// 存档管理 UI（S7）：3 存档槽（摘要/保存/读取/覆盖确认）+ 导出 JSON / 导入。
+// 存档管理 UI：3 存档槽（摘要/保存/读取/覆盖确认）+ 导出 JSON / 导入。
 // 挂在状态视图底部；localStorage 只经 save/save.ts（全项目唯一触点）。
 import { loadGame } from '../../core/index';
 import type { SaveGame, StateSlice } from '../../core/types';
@@ -10,7 +10,7 @@ import { importJson, isOfficialSave, loadSlot, saveToSlot, type SlotId } from '.
 import { SFX } from '../sfx';
 import { enqueueNotice, processQueue } from '../modal';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
 /** 槽位摘要（纯函数）：第 N 天 · 现金 · 结局态 · 保存时间 */
 export function slotSummary(sv: SaveGame | null): string {
@@ -135,7 +135,7 @@ export function renderSaveSection(el: HTMLElement): void {
     try {
       const text = await file.text();
       const sv = importJson(text);
-      // [v0.10/W9] 溯源校验：非官方存档（缺 author/product 标记）警告后仍可载入
+      // 溯源校验：非官方存档（缺 author/product 标记）警告后仍可载入
       if (!isOfficialSave(sv)) {
         SFX.alarm();
         enqueueNotice('存档溯源', '这不是 OPC.exe 的官方存档（缺少作者溯源字段）——载入后果自负。', 'bad');

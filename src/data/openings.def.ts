@@ -1,5 +1,5 @@
-// 七维开局数据（设计方案 §十三；赛道6 × 背景6 × 难度4+custom × 特质14 × 性格3轴）
-// 特质点数制：cost 负数=消耗点数（增益），正数=返还点数（负担），预算 3 点（向导 S6 校验）
+// 七维开局数据赛道6 × 背景6 × 难度4+custom × 特质14 × 性格3轴）
+// 特质点数制：cost 负数=消耗点数（增益），正数=返还点数（负担），预算 3 点（向导校验）
 import type {
   BackgroundDef, DifficultyDef, NicheDef, PersonalityDef, TalentDef
 } from '../core/types';
@@ -42,7 +42,7 @@ export const NICHE_DEFS: NicheDef[] = [
     flags: ['niche_kol'],
     startSkills: { expression: 1 },
     effects: [
-      // [S8] 修 S1 数据缝：平台 id 是 'xhs'（platforms.def），原 'xiaohongshu' 会开出幽灵账号不参与任何结算
+      // 修数据缝：平台 id 是 'xhs'（platforms.def），原 'xiaohongshu' 会开出幽灵账号不参与任何结算
       { k: 'followers.xhs', op: '+', v: 500 },
       { k: 'skillExp.expression', op: '+', v: 10 }
     ]
@@ -462,7 +462,7 @@ export const PERSONALITY_DEFS: PersonalityDef[] = [
   }
 ];
 
-// 便捷查找（state.ts / 向导 S6 用）
+// 便捷查找（state.ts / 向导用）
 export function findNiche(id: string): NicheDef | undefined {
   return NICHE_DEFS.find(d => d.id === id);
 }

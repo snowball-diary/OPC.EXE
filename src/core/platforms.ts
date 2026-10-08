@@ -1,10 +1,10 @@
-// 平台与分发引擎（技术文档 §10；设计方案 §七）——S3 真实现，替换 S2 桩
+// 平台与分发引擎
 //
 // 职责：
 //   ensureAccount        无账号则创建 observe 状态（30 天，流量×0.4，违规惩罚×2）
 //   rollPlatformDay      observe 计时 / throttled 7 天计时 / 粉丝自然漂移 / 日变现入账 /
 //                        一鱼八吃延迟队列（dist: 前缀链种子）/ banRiskRoll / 收入占比与依赖警戒
-//   publishContent       大爆小爆抽样（§5.7：90% 平庸 / 9% ×3 / 1% ×15）+ AI 未声明检测×3 + banRisk 累积
+//   publishContent       大爆小爆抽样90% 平庸 / 9% ×3 / 1% ×15）+ AI 未声明检测×3 + banRisk 累积
 //   distributeContent    一鱼八吃：按 delayHours 分当日/次日/三日三批，各平台独立抽样
 //   banRiskRoll          normal→throttled（7 天流量×0.3）→banned（粉丝按私域化率清算，收入停）
 //   banChance            概率纯函数：单平台收入占比>60% → ×3（依赖警戒）
@@ -31,12 +31,12 @@ export function ensureAccount(s: StateSlice, pid: string): PlatformAccount {
 
 // ---------- 纯函数工具 ----------
 
-/** 大爆小爆分段：u<0.90 平庸×1 / <0.99 小爆×3 / 其余大爆×15（§5.7 幂律） */
+/** 大爆小爆分段：u<0.90 平庸×1 / <0.99 小爆×3 / 其余大爆×15（幂律） */
 export function plTier(u: number): 1 | 3 | 15 {
   return u < 0.9 ? 1 : u < 0.99 ? 3 : 15;
 }
 
-/** 账号状态流量乘子：observe 0.4 / throttled 0.3 / banned 0 / normal 1（§10.1） */
+/** 账号状态流量乘子：observe 0.4 / throttled 0.3 / banned 0 / normal 1 */
 export function stateFlowMult(acc: PlatformAccount): number {
   if (acc.state === 'observe') return 0.4;
   if (acc.state === 'throttled') return 0.3;
@@ -44,7 +44,7 @@ export function stateFlowMult(acc: PlatformAccount): number {
   return 1;
 }
 
-/** 出海线：海外/游牧 location 视作出海，否则 youtube 流量×0.3（设计方案 §七） */
+/** 出海线：海外/游牧 location 视作出海，否则 youtube 流量×0.3 */
 export function isOverseas(s: StateSlice): boolean {
   const tier = findLocation(s.location)?.tier ?? '';
   return tier.includes('海外') || tier.includes('游牧');
@@ -104,21 +104,21 @@ export function publishContent(s: StateSlice, pid: string, rng: Rng): { ok: bool
   const contentOn = s.agents.some(a => a.id === 'content');
   const growthOn = s.agents.some(a => a.id === 'growth');
 
-  // --- AI 未声明检测：content agent 在岗且未声明 → 概率×3（§8.5/§10） ---
+  // --- AI 未声明检测：content agent 在岗且未声明 → 概率×3 ---
   let aiFlagged = false;
   const detectP = acc.aiDeclared ? 0 : contentOn ? 0.02 * 3 : 0.02; // 2026 AI 标识义务
   if (detectP > 0 && rng.chance(detectP)) {
     aiFlagged = true;
     enqueueEvent(s, 'aiUndeclared', 'forced', { cooldownDays: 7 });
     if (!findEventDef('aiUndeclared')) {
-      // S5 未落地该事件 → 内部小惩罚先行（限流：banRisk+、粉丝小幅流失）
+      // 事件层未落地该事件 → 内部小惩罚先行（限流：banRisk+、粉丝小幅流失）
       acc.banRisk = clamp01(acc.banRisk + 4 * def.banRiskBase * obs);
       acc.followers = Math.max(0, Math.round(acc.followers * 0.95));
       pushLog(s, `【${def.name}】AI 未声明被检测标记：限流惩罚（补声明可消除）。`, 'bad');
     }
   }
 
-  // --- banRisk 累积：平台底噪 + growth/content 用量（§8.5）+ 未声明 + 谐音变体（§七：规避反而加重） ---
+  // --- banRisk 累积：平台底噪 + growth/content 用量+ 未声明 + 谐音变体规避反而加重） ---
   let add = 0.4 * def.banRiskBase * obs;
   if (growthOn) add += 0.3 * agentScale(s, 'growth') * obs;
   if (contentOn) add += 0.3 * agentScale(s, 'content') * obs;
@@ -136,7 +136,7 @@ export function publishContent(s: StateSlice, pid: string, rng: Rng): { ok: bool
   acc.followers += gain;
   s.stats.followersPeak = Math.max(s.stats.followersPeak, acc.followers);
 
-  // --- 即时变现（observe 期不变现；大爆/小爆有爆发系数）[S9] 地点市场规模参与 ---
+  // --- 即时变现（observe 期不变现；大爆/小爆有爆发系数）地点市场规模参与 ---
   let income = 0;
   if (acc.state !== 'observe') {
     const burst = tier === 15 ? 30 : tier === 3 ? 8 : 1;
@@ -149,7 +149,7 @@ export function publishContent(s: StateSlice, pid: string, rng: Rng): { ok: bool
     if (tier === 15) s.stats.bigHits += 1;
     s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + income;
     s.flags[`pl_inc_${pid}`] = num(s.flags[`pl_inc_${pid}`]) + income;
-    s.dailyFlow.passiveIn += income; // [v0.10/W2] 发布即时变现 → 今日净流
+    s.dailyFlow.passiveIn += income; // 发布即时变现 → 今日净流
   }
 
   const aiNote = aiFlagged ? '（AI 未声明被标记！）' : '';
@@ -161,7 +161,7 @@ export function publishContent(s: StateSlice, pid: string, rng: Rng): { ok: bool
   return { ok: true, msg, followers: gain, income };
 }
 
-// ---------- 一鱼八吃（§10.2 瀑布分发） ----------
+// ---------- 一鱼八吃（瀑布分发） ----------
 
 export interface DistributeResult {
   ok: boolean;
@@ -212,14 +212,14 @@ export function banRiskRoll(s: StateSlice, pid: string, rng: Rng): PlatformAccou
     if (acc.banRisk >= 85) return toBanned(s, pid, acc);
     acc.state = 'throttled';
     s.flags[`pl_throttle_${pid}`] = 7;
-    grantKp(s, 'platformRisk'); // [S8] 首次限流送平台风险词条
+    grantKp(s, 'platformRisk'); // 首次限流送平台风险词条
     pushLog(s, `【限流】${findPlatform(pid)?.name ?? pid}触发风控：7 天流量×0.3（banRisk ${Math.round(acc.banRisk)}）。收手或转平台，自己选。`, 'bad');
     return 'throttled';
   }
   return toBanned(s, pid, acc); // throttled 再犯 → banned
 }
 
-/** 平台日（time.ts 步 5 调用点，保持 S2 函数名）：状态机计时 / 漂移 / 日变现 / 延迟队列 / 掷骰 */
+/** 平台日（time.ts 步 5 调用点）：状态机计时 / 漂移 / 日变现 / 延迟队列 / 掷骰 */
 export function rollPlatformDay(s: StateSlice, rng: Rng): void {
   if (s.meta.over) return;
   const monthBoundary = s.meta.day % 30 === 0;
@@ -246,7 +246,7 @@ export function rollPlatformDay(s: StateSlice, rng: Rng): void {
       acc.observeDaysLeft = Math.max(0, acc.observeDaysLeft - 1);
       if (acc.observeDaysLeft === 0) {
         acc.state = 'normal';
-        grantKp(s, 'newAccount'); // [S8] 首个观察期结束送平台冷启动词条
+        grantKp(s, 'newAccount'); // 首个观察期结束送平台冷启动词条
         pushLog(s, `【${def.name}】30 天观察期结束：流量恢复正常，变现开启。`, 'good');
       }
     } else if (acc.state === 'throttled') {
@@ -261,7 +261,7 @@ export function rollPlatformDay(s: StateSlice, rng: Rng): void {
     }
     acc.followers = Math.max(0, Math.round(acc.followers * 0.998)); // 自然漂移 -0.2%/日
     if (acc.state !== 'observe') {
-      const market = findLocation(s.location)?.marketMult ?? 1; // [S9] 日变现同享地点市场规模
+      const market = findLocation(s.location)?.marketMult ?? 1; // 日变现同享地点市场规模
       let inc = acc.followers * def.mRate * phaseMult(s.economyPhase) * market * (acc.state === 'throttled' ? 0.3 : 1);
       if (pid === 'youtube' && !overseas) inc *= 0.3;
       inc = Math.round(inc);
@@ -270,7 +270,7 @@ export function rollPlatformDay(s: StateSlice, rng: Rng): void {
         s.stats.totalRevenue += inc;
         s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) + inc;
         s.flags[`pl_inc_${pid}`] = num(s.flags[`pl_inc_${pid}`]) + inc;
-        s.dailyFlow.passiveIn += inc; // [v0.10/W2] 平台日变现 → 今日净流
+        s.dailyFlow.passiveIn += inc; // 平台日变现 → 今日净流
       }
     }
     if (acc.banRisk > 0) acc.banRisk = Math.max(0, acc.banRisk - 0.3); // 改过自新缓降
@@ -283,7 +283,7 @@ export function rollPlatformDay(s: StateSlice, rng: Rng): void {
     for (const pid of Object.keys(s.platforms)) s.flags[`pl_inc_${pid}`] = 0;
   }
   const dep = platformDependency(s);
-  // [v0.10/体感修复] 依赖警戒加收入地板：月入不足 ¥500 时占比>60% 只是噪声
+  // 依赖警戒加收入地板：月入不足 ¥500 时占比>60% 只是噪声
   // （样张实证：观察期刚结束、平台月入 ¥7 也弹「依赖警戒」，玩家被假警报练出免疫）
   if (dep && num(s.flags[`pl_inc_${dep}`]) >= 500 && num(s.flags.plDepWarnDay) < s.meta.day - 6) {
     s.flags.plDepWarnDay = s.meta.day;
@@ -291,5 +291,5 @@ export function rollPlatformDay(s: StateSlice, rng: Rng): void {
   }
 }
 
-/** 任务书口径别名（与 rollPlatformDay 同一实现） */
+/** 口径别名（与 rollPlatformDay 同一实现） */
 export const tickPlatformsDay = rollPlatformDay;

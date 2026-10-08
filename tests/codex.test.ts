@@ -1,4 +1,4 @@
-// S4 验收测试：知识点词条（数量/来源/长度/键唯一）/ 老张台词池（四戒·≤40 字·每景≥2·pickZhang）/
+// 图鉴与成就测试：知识点词条（数量/来源/长度/键唯一）/ 老张台词池（四戒·≤40 字·每景≥2·pickZhang）/
 // 成就系统（24 条 check 纯函数可执行 / firstOrder 幂等解锁 / advanceDay 接线日志 / 图鉴成就）/ suddenDeath 时代锚点
 import { describe, expect, it } from 'vitest';
 import { createInitialSlice } from '../src/core/state';
@@ -45,7 +45,7 @@ const ZHANG_SITUATIONS: ZhangSituation[] = [
 // 一、知识点词条 KP
 // ============================================================
 
-describe('kp.def：知识点词条（§18.1 可溯源）', () => {
+describe('kp.def：知识点词条（可溯源）', () => {
   it('≥28 条且全部有非空 source（每条注明现实来源）', () => {
     expect(KP_DEFS.length).toBeGreaterThanOrEqual(28);
     expect(Object.keys(KP).length).toBe(KP_DEFS.length); // Record 与数组同构
@@ -83,7 +83,7 @@ describe('kp.def：知识点词条（§18.1 可溯源）', () => {
 // 二、老张台词池
 // ============================================================
 
-describe('zhang.def：老张台词池（§7.4 四戒）', () => {
+describe('zhang.def：老张台词池（四戒）', () => {
   it('≥15 条，每个 situation ≥2', () => {
     expect(ZHANG_LINES.length).toBeGreaterThanOrEqual(15);
     for (const sit of ZHANG_SITUATIONS) {
@@ -170,7 +170,7 @@ describe('achievements.def：24 条 check 全部可执行（纯函数不抛异�
 });
 
 // ============================================================
-// 四、一致性：suddenDeath 时代锚点（§7.4）
+// 四、一致性：suddenDeath 时代锚点
 // ============================================================
 
 describe('endings.def：时代锚点巡检', () => {

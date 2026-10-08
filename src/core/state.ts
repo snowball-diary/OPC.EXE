@@ -1,12 +1,12 @@
-// 状态切片：初始化 / 钳制 / 不变量（技术文档 §四 末）
+// 状态切片：初始化 / 钳制 / 不变量（末）
 // createInitialSlice 应用七维开局；init 效果只落「简单数值键」，
-// contacts/assets 等「世界生成类」效果留给 S2+ 引擎解释（见 applyInitEffects 分支注释）。
+// contacts/assets 等「世界生成类」效果不在初始化落地（见 applyInitEffects 分支注释）。
 import {
   findBackground, findDifficulty, findNiche, findPersonality, findTalent
 } from '../data/openings.def';
 import { findLocation } from '../data/locations.def';
 import { createRng } from './rng';
-import { recalcLiving } from './economy'; // [S2] 修正 S1 的生活费基数 1000 → 8000（LIVING_BASE）
+import { recalcLiving } from './economy'; // 月生活费统一走经济引擎（LIVING_BASE）
 import type {
   EconomyPhase, Effect, EntityForm, LogEntry, PlatformAccount, SetupConfig, SkillDim,
   SkillLevel, StateSlice
@@ -66,7 +66,7 @@ function applyInitEffects(s: StateSlice, effects: readonly Effect[]): void {
         case 'mood': s.health.mood.v = clamp(e.op === '=' ? val : s.health.mood.v + val); break;
         case 'diet': s.health.diet.v = clamp(e.op === '=' ? val : s.health.diet.v + val); break;
         case 'exercise': s.health.exercise.v = clamp(e.op === '=' ? val : s.health.exercise.v + val); break;
-        // 以下为引擎期语义（世界生成/复合量），初始化不落地，交由 S2+ 处理：
+        // 以下为引擎期语义（世界生成/复合量），初始化不落地，由引擎分支处理：
         // contacts/assetAdd/rep/influence/power/autoLevel/tokenBill/attentionCap/ap/
         // hiddenFatigue/burnoutCount/healthWhole/project*/deliveries.*
         default: break;
@@ -84,7 +84,7 @@ function ensurePlatform(s: StateSlice, pid: string): PlatformAccount {
   return acc;
 }
 
-/** 七维开局 → 初始状态切片（技术文档 §四/§5.1；设计方案 §十三） */
+/** 七维开局 → 初始状态切片 */
 export function createInitialSlice(setup: SetupConfig): StateSlice {
   const niche = findNiche(setup.niche);
   if (!niche) throw new Error(`UNKNOWN_NICHE: ${setup.niche}`);
@@ -101,8 +101,8 @@ export function createInitialSlice(setup: SetupConfig): StateSlice {
 
   // 本体五元基线
   const health = {
-    sleep: { v: 70, drift: -8 },   // §5.1 漂移：sleep -8
-    mood: { v: 70, drift: -2 },    // mood -2 + 压力溢出/10（溢出项引擎加）[S9] -3→-2：低情绪 wobble→中断链过密（sim 实证）
+    sleep: { v: 70, drift: -8 },   // 漂移：sleep -8
+    mood: { v: 70, drift: -2 },    // mood -2 + 压力溢出/10（溢出项引擎加）-3→-2：低情绪 wobble→中断链过密（sim 实证）
     diet: { v: 70, drift: -5 },    // diet -5
     exercise: { v: 70, drift: -6 },// exercise -6
     hiddenFatigue: 0
@@ -118,7 +118,7 @@ export function createInitialSlice(setup: SetupConfig): StateSlice {
     if (isSkillDim(dim) && typeof lv === 'number') skills[dim] = Math.max(skills[dim], lv) as SkillLevel;
   }
 
-  // 现金 = 背景基数 × 难度倍率；月生活费 = LIVING_BASE(8000) × 地点系数 × 难度系数（§6 按月扣，日折算=/30）
+  // 现金 = 背景基数 × 难度倍率；月生活费 = LIVING_BASE(8000) × 地点系数 × 难度系数（按月扣，日折算=/30）
   const cash = Math.round(bg.baseCash * diff.cashMult);
 
   const s: StateSlice = {
@@ -159,7 +159,7 @@ export function createInitialSlice(setup: SetupConfig): StateSlice {
     debt: 0,
     runway: 0,
     monthlyIncome: 0,
-    monthlyExpense: 0, // [S2] 由 recalcLiving 落账（下方调用）
+    monthlyExpense: 0, // 由 recalcLiving 落账（下方调用）
     decisionMode: 'system2',
     dayType: 'standard',
     burnoutCount: 0,
@@ -207,7 +207,7 @@ export function createInitialSlice(setup: SetupConfig): StateSlice {
   for (const p of axes) if (p) applyInitEffects(s, p.effects);
 
   clampAll(s);
-  recalcLiving(s); // [S2] init 月生活费统一走经济引擎（修正基数 1000 → 8000）
+  recalcLiving(s); // init 月生活费统一走经济引擎（修正基数 1000 → 8000）
   s.runway = computeRunway(s);
   s.stats.maxCash = Math.max(s.stats.maxCash, s.cash);
   return s;
@@ -222,7 +222,7 @@ export function pushLog(s: StateSlice, msg: string, cls: LogEntry['cls'] = 'sys'
 }
 
 /**
- * [S8] KP 知识点持久记账：flags['kp_'+key]=true（存档携带，跨会话点亮图鉴）。
+ * KP 知识点持久记账：flags['kp_'+key]=true（存档携带，跨会话点亮图鉴）。
  * deliver=true 时把 key 压入 pending.kpQueue（UI 弹窗队列消费处 → main.ts onEndDay）；
  * deliver=false 仅记「已读」（图鉴页主动展开用）。幂等：已记账直接返回。
  */
@@ -291,7 +291,7 @@ export function clampAll(s: StateSlice): StateSlice {
   for (const key of Object.keys(port) as (keyof typeof port)[]) {
     port[key] = Math.max(0, Math.round(port[key]));
   }
-  if (!s.portfolioCost) s.portfolioCost = { ...port }; // [v0.10] 旧档兜底：成本=当前市值（已实现收益从零起算）
+  if (!s.portfolioCost) s.portfolioCost = { ...port }; // 旧档兜底：成本=当前市值（已实现收益从零起算）
   const pc = s.portfolioCost;
   for (const key of Object.keys(pc) as (keyof typeof pc)[]) {
     pc[key] = Math.max(0, Math.min(port[key], Math.round(pc[key])));
@@ -304,7 +304,7 @@ export function clampAll(s: StateSlice): StateSlice {
   return s;
 }
 
-/** 不变量检查（技术文档 §四 末），返回违规清单；空数组=通过 */
+/** 不变量检查，返回违规清单；空数组=通过 */
 export function assertInvariants(s: StateSlice): string[] {
   const v: string[] = [];
   const in01 = (n: number) => n >= 0 && n <= 100;

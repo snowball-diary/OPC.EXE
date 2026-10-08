@@ -1,4 +1,4 @@
-// 成就引擎（S4）：checkAchievements 返回本轮新解锁并写 flags 记账；achCount 统计已解锁数
+// 成就引擎：checkAchievements 返回本轮新解锁并写 flags 记账；achCount 统计已解锁数
 // 接线：time.ts advanceDay 末尾调用，新解锁以 cls 'gold' 写入日志（存档天然携带 flags，无需额外序列化）
 import { ACHIEVEMENT_DEFS } from '../data/achievements.def';
 import type { AchDef } from '../data/achievements.def';

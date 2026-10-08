@@ -1,6 +1,6 @@
-// 事件引擎（技术文档 §九）——S3 真实现：Cond 求值 / 每日抽样 / 连锁种子 / System1 过滤 / 静态校验
+// 事件引擎：Cond 求值 / 每日抽样 / 连锁种子 / System1 过滤 / 静态校验
 //
-// S5 数据文件（events.def.ts）写作规范：
+// 事件数据文件（events.def.ts）写作规范：
 //   EventDef.when   : Cond[]，全部通过才可被抽中（求值器 evalCond 支持全部算子，见下）
 //   Cond['flag',k]  : 长度 2 = flag 存在且为真值；['flag','==',k,v] 长度 4 = 精确比较（靠元组长度区分）
 //   ChoiceDef.effects: EffectKey 联合类型（cash/compliance/stress/followers.<pid>/project* 等，
@@ -18,7 +18,7 @@ import { grantKp, pushLog } from './state';
 import type { Rng } from './rng';
 import type { ChainSeed, ChoiceDef, ChoiceResult, Cond, EventDef, PendingEvent, StateSlice } from './types';
 
-// ---------- §9.1 触发谓词 DSL（结构化，禁 eval） ----------
+// ---------- 触发谓词 DSL（结构化，禁 eval） ----------
 
 /** 递归判别式联合求值；rng 供 ['random','<',p] 使用（缺省退化 Math.random，引擎内始终传入） */
 export function evalCond(s: StateSlice, c: Cond, rng?: Rng): boolean {
@@ -50,7 +50,7 @@ export function evalCond(s: StateSlice, c: Cond, rng?: Rng): boolean {
   }
 }
 
-// ---------- §9.2 抽样与队列 ----------
+// ---------- 抽样与队列 ----------
 
 export const BASE_EVENT_CHANCE = 0.35; // 每日基础触发率，×难度 eventFrequency
 const HEART_WARN_ID = 'heartAttackWarn';
@@ -61,7 +61,7 @@ export function rollEvents(s: StateSlice, rng: Rng): PendingEvent[] {
   if (s.meta.over) return [];
   const out: PendingEvent[] = [];
   out.push(...tickChains(s, rng));
-  // 心悸预警（猝死链前置 §7.3）：hiddenFatigue≥70 且 cooldown 到期 → 置顶必出，当日不再抽其他
+  // 心悸预警（猝死链前置 ）：hiddenFatigue≥70 且 cooldown 到期 → 置顶必出，当日不再抽其他
   if (s.health.hiddenFatigue >= 70) {
     const ev = enqueueEvent(s, HEART_WARN_ID, 'forced', { cooldownDays: HEART_WARN_COOLDOWN });
     if (ev) return [...out, ev];
@@ -74,7 +74,7 @@ export function rollEvents(s: StateSlice, rng: Rng): PendingEvent[] {
   return ev ? [...out, ev] : out;
 }
 
-/** 八类池过滤（[S9] 改：random 条件独立掷点，与加权抽样解耦）
+/** 八类池过滤（random 条件独立掷点，与加权抽样解耦）
  *  旧实现：['random','<',p] 与普通 when 一起求值一次，通过后还要再跟全部候选拼 weight 抽样——
  *  名义命中率 p 被抽样竞争二次稀释（如黑天鹅 3% 实测远低于 3%/抽样日），长线事件几乎见不到。
  *  现拆两层：
@@ -145,7 +145,7 @@ export function resolveChoice(s: StateSlice, ev: EventDef, choiceIdx: number, rn
     s.pending.chains.push({ event: seed.event, delayDays: Math.max(0, seed.delayDays), ifCond: seed.ifCond });
   }
   resolveEvent(s, ev.id);
-  // [v0.10/W8] 修复「周焦点事件选了不生效」：choice.id → s.focus 真正落地（此前只给小 buff）
+  // 修复「周焦点事件选了不生效」：choice.id → s.focus 真正落地（此前只给小 buff）
   if (ev.id === 'weekly-focus') {
     if (choice.id === 'focus-health') s.focus = 'health';
     else if (choice.id === 'focus-cash') s.focus = 'cash';
@@ -164,7 +164,7 @@ export function resolveChoice(s: StateSlice, ev: EventDef, choiceIdx: number, rn
   return { ok: true, msg: choice.results, ending, eventId: ev.id };
 }
 
-// ---------- §9.3 连锁种子 ----------
+// ---------- 连锁种子 ----------
 
 /** delayDays 每日 -1；==0 且 ifCond 通过 → 入事件池（dist: 前缀条目归平台引擎，跳过） */
 export function tickChains(s: StateSlice, rng: Rng): PendingEvent[] {
@@ -189,7 +189,7 @@ export function tickChains(s: StateSlice, rng: Rng): PendingEvent[] {
   return out;
 }
 
-// ---------- System1 选项过滤（渲染层直接调用，§5.2/§9.2） ----------
+// ---------- System1 选项过滤（渲染层直接调用，/） ----------
 
 /**
  * 三规则：①非 System2 时 requires:'system2' 的选项剔除
@@ -207,7 +207,7 @@ export function filterChoicesForUI(s: StateSlice, ev: EventDef): ChoiceDef[] {
   return out;
 }
 
-// ---------- 静态校验（S5 数据入库 / S9 平衡模拟用） ----------
+// ---------- 静态校验（数据入库 / 平衡模拟用） ----------
 
 /** 连锁 DAG 环检测：EventDef.chain + ChoiceDef.chain 构边，三色 DFS，返回闭环描述（空数组=通过） */
 export function validateChains(defs: EventDef[]): string[] {
@@ -243,7 +243,7 @@ export function validateChains(defs: EventDef[]): string[] {
 
 /**
  * when 可达性简化校验：引用的 agent/平台 id 必须存在于 defs 表；
- * flag 需属于已知引擎落账清单（否则提示 S5 确认来源）；chain 目标必须存在；weight>0；choices 非空。
+ * flag 需属于已知引擎落账清单（否则需确认其来源）；chain 目标必须存在；weight>0；choices 非空。
  */
 const KNOWN_FLAGS = new Set([
   'grayHistory', 'heartAttackWarn', 'cryptoOn', 'privateDomain', 'homophone',
@@ -294,9 +294,9 @@ export function validateWhenReachable(defs: EventDef[]): string[] {
   return warns;
 }
 
-// ---------- 入队记账（S2 已实现，原样保留） ----------
+// ---------- 入队记账 ----------
 
-/** [S8] 事件 → 知识点词条投递表：事件首次入队时把对应 KP 压入 pending.kpQueue（UI 弹窗消费） */
+/** 事件 → 知识点词条投递表：事件首次入队时把对应 KP 压入 pending.kpQueue（UI 弹窗消费） */
 const KP_BY_EVENT: Record<string, string> = {
   heartAttackWarn: 'hiddenFatigue',
   'heart-attack': 'fireLine',
@@ -315,7 +315,7 @@ const KP_BY_EVENT: Record<string, string> = {
 /**
  * 入队待处理事件（去重 / once / cooldown 记账）。
  * once → flags.ev_once_{id}；cooldown → flags.ev_last_{id} 记录入队日。
- * [S8] 命中 KP_BY_EVENT 的词条随事件投递（grantKp 幂等，flags['kp_'+key] 持久记账）。
+ * 命中 KP_BY_EVENT 的词条随事件投递（grantKp 幂等，flags['kp_'+key] 持久记账）。
  */
 export function enqueueEvent(
   s: StateSlice,

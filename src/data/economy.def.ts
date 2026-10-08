@@ -1,16 +1,16 @@
-// 经济常量与周期参数（技术文档 §6.3/§6.4；设计 §六）——全部数值可调参
+// 经济常量与周期参数——全部数值可调参
 import type { EconomyPhase } from '../core/types';
 
-export const LIVING_BASE = 7000; // 月生活费基数（2026 物价口径；S2 修正 S1 的 1000 临时值）
-// [S9] 8000→7000：sim 实测标准局月毛利中位 8000-12000，8000 生活费把平凡线（设计目标 55%）的
+export const LIVING_BASE = 7000; // 月生活费基数（2026 物价口径）
+// 8000→7000：sim 实测标准局月毛利中位 8000-12000，8000 生活费把平凡线（设计目标 55%）的
 // 盈亏平衡窗压得过窄——bot 中位 ~150 天后事件/维护/税费的任一波动即滑向破产。7000 对应新一线
 // 节俭独居者 2026 口径，平凡线可长期维持，成长期门槛不变。
-export const SUB_BASE = 200; // 工具订阅基础/月（设计 §6.2）
+export const SUB_BASE = 200; // 工具订阅基础/月
 export const AI_SUB = 800; // AI 全家桶订阅/月（flags.aiSub 时叠加）
 export const BOOKKEEPING_FEE = 300; // 代账月费（自记账行动可省）
 export const RELOCATE_MULT = 2; // 迁居费 = 月生活费 × 2
 
-/** 经济周期转移矩阵（月掷，每行和 = 1，技术文档 §6.4 精确数字） */
+/** 经济周期转移矩阵（月掷，每行和 = 1） */
 export const PHASE_TRANSITIONS: Record<EconomyPhase, [EconomyPhase, number][]> = {
   boom: [['boom', 0.55], ['overheat', 0.35], ['recession', 0.10]],
   overheat: [['overheat', 0.4], ['recession', 0.5], ['boom', 0.1]],
@@ -18,7 +18,7 @@ export const PHASE_TRANSITIONS: Record<EconomyPhase, [EconomyPhase, number][]> =
   recovery: [['recovery', 0.4], ['boom', 0.5], ['overheat', 0.1]]
 };
 
-/** 订单量与广告单价乘子（0.7-1.3，§6.4） */
+/** 订单量与广告单价乘子（0.7-1.3） */
 export const PHASE_ORDER_MULT: Record<EconomyPhase, number> = {
   overheat: 1.3,
   boom: 1.15,
@@ -37,7 +37,7 @@ export const ASSET_RET: Record<'fund' | 'bond' | 'indexFund' | 'stock' | 'crypto
 };
 
 /**
- * [v0.10/W2] 日波动率（金融 Tab「今日盈亏」与市值路径用）：
+ * 日波动率（金融 Tab「今日盈亏」与市值路径用）：
  * 货基 0.01%/日、债 0.03%、指数 0.08%、个股 0.35%、加密 2.2%、房产 0.02%（月租已折进日漂移）。
  * 日漂移 = ASSET_RET 月期望 / 30；市值每日浮动累积，卖出才落袋为现金。
  */

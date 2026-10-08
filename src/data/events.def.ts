@@ -1,6 +1,6 @@
-// 事件数据全量（S5：80 条正式事件 + [v0.10/W9] 1 条作者彩蛋 = 81 条；NEWS_TICKER 顶栏新闻条 30 条）
+// 事件数据全量（80 条正式事件 + 1 条作者彩蛋 = 81 条；NEWS_TICKER 顶栏新闻条 30 条）
 //
-// 写作规范（技术文档 §9.4/§18.1；设计方案 §十）：
+// 写作规范：
 //   - 基调：真实、克制、具体（有数字有场景）；禁鸡汤禁说教；每条事件必须有独特触发条件或独特后果
 //   - 老张台词（oldZhang）四戒：只说事实与代价 / 不评价人 / 不阻止选择 / 每句 ≤40 字；只在不可逆代价前出现
 //   - when 全部用结构化 Cond；flag 条件只允许引擎已知 flag（KNOWN_FLAGS ∪ ev_*），否则 validateWhenReachable 报警
@@ -9,7 +9,7 @@
 //   - 引擎定向入队的保留 id（enqueueEvent 不检查 when）：when 首条统一写 ['random','<',0]（恒假），
 //     使其永不进入随机池，只由引擎 forced 入队——weight 照常填写
 //   - 效果键契约：事件层禁用 {k:'energy'}（applyEffects 对 energy 的 '+' 按 '=' 处理，引擎怪癖）；
-//     tokenPriceIndex='tokenBill.priceIndex 落点'，flag.<名称>=flag 记账（引擎 handler 见 S5 报告）
+//     tokenPriceIndex='tokenBill.priceIndex 落点'，flag.<名称>=flag 记账（引擎 handler 见 applyEffects）
 //   - 时代锚点：2026 年 4 月张雪峰过劳猝死（NEWS_TICKER day1 + 心悸/猝死线克制回响，不调侃）
 //
 // 配额（恰 80）：保留 7 + 智能体事故 10 + Token 价格 4 + 猝死/过劳链 5 + 灰产 8 + 平台政策 8 +
@@ -17,7 +17,7 @@
 import type { EventDef } from '../core/types';
 
 // ============================================================
-// NEWS_TICKER：顶栏新闻条（技术文档 §7.4；day1 必含时代锚点）
+// NEWS_TICKER：顶栏新闻条（day1 必含时代锚点）
 // ============================================================
 
 export const NEWS_TICKER: { day: number; text: string }[] = [
@@ -58,7 +58,7 @@ export const NEWS_TICKER: { day: number; text: string }[] = [
 // ============================================================
 
 export const EVENT_DEFS: EventDef[] = [
-  // ---------- 心悸预警（hiddenFatigue≥70 置顶必出，cooldown 5；猝死链前置 §7.3） ----------
+  // ---------- 心悸预警（hiddenFatigue≥70 置顶必出，cooldown 5；猝死链前置 ） ----------
   {
     id: 'heartAttackWarn',
     title: '心悸预警：凌晨两点的心跳声',
@@ -107,7 +107,7 @@ export const EVENT_DEFS: EventDef[] = [
     oldZhang: '四月的事刚上过热搜。心电图和现金流一样，都撑不了几次。'
   },
 
-  // ---------- 强化预警（hf≥85 时引擎 forced，二选一：就医或硬撑 §7.3） ----------
+  // ---------- 强化预警（hf≥85 时引擎 forced，二选一：就医或硬撑 ） ----------
   {
     id: 'heart-attack',
     title: '心悸加重：胸口像压了一块板',
@@ -300,7 +300,7 @@ export const EVENT_DEFS: EventDef[] = [
     cat: 'health',
     when: [['random', '<', 0]], // 引擎 forced 入队（recoveryState 波动→中断）
     weight: 25,
-    cooldownDays: 14, // [S9] 10→14：中断回调密度下调（情绪 wobble 链实证），deny 打击不再是过劳主因
+    cooldownDays: 14, // 10→14：中断回调密度下调（情绪 wobble 链实证），deny 打击不再是过劳主因
     choices: [
       {
         id: 'follow-protocol',
@@ -813,8 +813,8 @@ export const EVENT_DEFS: EventDef[] = [
   },
 
   // ============================================================
-  // 三、Token 价格周期：4 条（priceIndex 落点 = tokenBill.priceIndex，S5 增量键 tokenPriceIndex）
-  //     月账单 = Σ(base+perUnit×用量)×priceIndex（§8.2）；价格指数不归玩家管，只归市场管
+  // 三、Token 价格周期：4 条（priceIndex 落点 = tokenBill.priceIndex，增量键 tokenPriceIndex）
+  //     月账单 = Σ(base+perUnit×用量)×priceIndex；价格指数不归玩家管，只归市场管
   // ============================================================
 
   {
@@ -997,7 +997,7 @@ export const EVENT_DEFS: EventDef[] = [
   },
 
   // ============================================================
-  // 四、猝死/过劳链：5 条（健康心理池；与 §7 三线互为叙事）
+  // 四、猝死/过劳链：5 条（健康心理池；与 三线互为叙事）
   // ============================================================
 
   {
@@ -1209,7 +1209,7 @@ export const EVENT_DEFS: EventDef[] = [
   },
 
   // ============================================================
-  // 五、平台政策：8 条（crisis-ai-crackdown 为 S3 引擎测试基准事件，结构不可改动）
+  // 五、平台政策：8 条（crisis-ai-crackdown 为引擎抽样基准事件，结构不可改动）
   // ============================================================
 
   {
@@ -1217,7 +1217,7 @@ export const EVENT_DEFS: EventDef[] = [
     title: '平台开始清查未声明 AI 内容',
     body: '你刷到官方公告：即日起对未声明 AI 生成的内容进行限流与处罚。评论区已经有人在小红书晒出被封的截图——你看了眼自己的账号，粉丝 {followers} 人，压力 {stress}/100，这条公告跟你有关。',
     cat: 'platform',
-    when: [], // S3 抽样基准：无门槛事件，让任何状态都可能抽到（day1 池成员）
+    when: [], // 抽样基准：无门槛事件，让任何状态都可能抽到（day1 池成员）
     weight: 7,
     cooldownDays: 10,
     newsDay: 15,
@@ -1554,7 +1554,7 @@ export const EVENT_DEFS: EventDef[] = [
   },
 
   // ============================================================
-  // 六、灰产线：8 条（中转站 3 + 代充 2 + 清算连锁 3；§9.6 短多长空骨架）
+  // 六、灰产线：8 条（中转站 3 + 代充 2 + 清算连锁 3；短多长空骨架）
   //     灰产在场判定用 ['gray',true]（grayHistory，立项 apiRelay 永久记录）
   // ============================================================
 
@@ -3023,7 +3023,7 @@ export const EVENT_DEFS: EventDef[] = [
   },
 
   // ============================================================
-  // 十一、机会与危机：12 条（机会 6 + 危机 6；前两条为 S3 抽样基准池的 day1 成员）
+  // 十一、机会与危机：12 条（机会 6 + 危机 6；前两条为抽样基准池的 day1 成员）
   // ============================================================
 
   {
@@ -3031,7 +3031,7 @@ export const EVENT_DEFS: EventDef[] = [
     title: '客户想包月买你的自动化',
     body: '一位老客户发来消息：「你们那套自动回复能不能给我们公司也部署一套？按月付。」——AI 浪潮把你的手艺变成了可以复售的服务。',
     cat: 'opportunity',
-    when: [['stage', '>=', 1]], // S3 抽样基准：day1 池成员（另一个是 crisis-ai-crackdown）
+    when: [['stage', '>=', 1]], // 抽样基准：day1 池成员（另一个是 crisis-ai-crackdown）
     weight: 12,
     once: true,
     choices: [
@@ -3534,7 +3534,7 @@ export const EVENT_DEFS: EventDef[] = [
     ]
   },
 
-  // ---------- [v0.10/W9] 作者彩蛋（机会类，低权重，once；克制，不出戏） ----------
+  // ---------- 作者彩蛋（机会类，低权重，once；克制，不出戏） ----------
   {
     id: 'egg-laijiacheng-site',
     title: '收藏夹里的建站教程',

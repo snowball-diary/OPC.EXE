@@ -1,4 +1,4 @@
-// 三级弹窗队列（S6）：事件 > KP > 结算提示（技术文档 §12；原型 modalQueue 模式迁移）
+// 三级弹窗队列：事件 > KP > 结算提示（原型 modalQueue 模式迁移）
 // 事件弹窗必须选一项（filterChoicesForUI 过滤 → resolveChoice 结算 → 结果弹层 → 飘字 → renderAll）；
 // KP / Notice 可 ESC 或点背景关闭。弹窗打开时场景动画暂停（纯视觉，不阻塞引擎）。
 // EventDef.oldZhang 存在时渲染专属老张台词块（深色底+左侧竖线+「老张」署名）。
@@ -180,7 +180,7 @@ function renderEventModal(ev: EventDef, s: StateSlice): void {
     catTag.textContent = ev.cat;
     const p = document.createElement('p');
     p.className = 'ev-body-text';
-    p.textContent = interpolateEventVars(ev.body, s); // [v0.10/W8] {cash}/{followers} 等实时变量插值
+    p.textContent = interpolateEventVars(ev.body, s); // {cash}/{followers} 等实时变量插值
     body.appendChild(catTag);
     body.appendChild(p);
   }

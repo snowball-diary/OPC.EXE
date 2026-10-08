@@ -1,5 +1,5 @@
 // ============================================================
-// [S9] 平衡模拟器（技术文档 §16.2 / 设计 §十二 目标分布表）
+// 平衡模拟器
 // 8 策略机器人 × 8 开局混布 × 19 种子 = 152 局/bot（共 1216 局），720 天上限。
 // 产出 game/sim-report.md：结局分布 / 阶段到达 / 存活中位数 / 猝死过劳 /
 // 智能体雇佣率 / Token 月账单 / 幽灵公司 / 异常计数 / 目标对照 / 调参记录。
@@ -82,7 +82,7 @@ const RISKY_CHOICE_IDS = new Set([
   'hard-push', 'push-through', 'persist', 'deny', 'ignore', 'ignore-it', 'double-down',
   'scale-up', 'keep-burn', 'grit', 'stay-lean', 'all-nighter', 'skip-again', 'argue',
   'accelerate', 'repost', 'tough', 'more-volume', 'let-it-go', 'panic-scroll', 'ignore-siren', 'wait',
-  // [S9] 灰产/道德暗账线：接单/拖延/跑路/盗版/造假都是「短多长空」面，
+  // 灰产/道德暗账线：接单/拖延/跑路/盗版/造假都是「短多长空」面，
   // hint 里写明「N 天后法律冻结清算」——rotate bot 不踩标注过的灾难支（risky bot 仍专挑）
   'take-orders', 'stall', 'run-away', 'conceal', 'resist',
   'use-pirated', 'take-data', 'buy-10k', 'buy-engagement', 'make-hype',
@@ -90,7 +90,7 @@ const RISKY_CHOICE_IDS = new Set([
 ]);
 
 const choiceCursor = new Map<string, number>();
-/** [S9] 事件覆盖统计（有机 = 抽样/连锁/引擎 forced；weekly-focus 心跳不计） */
+/** 事件覆盖统计（有机 = 抽样/连锁/引擎 forced；weekly-focus 心跳不计） */
 const eventFired = new Map<string, number>();
 const HEARTBEAT_EVENTS = new Set(['weekly-focus']);
 
@@ -319,7 +319,7 @@ function botAct(g: Game, spec: BotSpec, rng: Rng): void {
   // —— 结构性操作 ——
   if (spec.automator && s.meta.stage >= 3) {
     // 自动化工：雇人优先级最高，先补齐 support+growth 基本盘；
-    // 月账单/上月收入 >35% 时先止损不扩编（§8.2 单位经济面板的理性读者）
+    // 月账单/上月收入 >35% 时先止损不扩编（单位经济面板的理性读者）
     const billNow = s.agents.length > 0 ? monthlyTokenBill(s, createRng(1)) : 0;
     const billHot = s.monthlyIncome > 0 && billNow > s.monthlyIncome * 0.35;
     const want = billHot ? [] : AUTOMATOR_HIRE_ORDER.map(id => AGENT_DEFS.find(d => d.id === id)).filter(
@@ -373,7 +373,7 @@ function botAct(g: Game, spec: BotSpec, rng: Rng): void {
     const pid = Object.entries(s.platforms).sort((a, b) => (b[1]?.followers ?? 0) - (a[1]?.followers ?? 0))[0]?.[0];
     if (pid) { g.dispatch({ t: 'declareAI', platform: pid }); return; }
   }
-  if (rng.chance(0.0008)) { // [S9] 0.002→0.0008：bot 无「旅居」意图，随机迁居把 secondLife 抬到 14.5%
+  if (rng.chance(0.0008)) { // 0.002→0.0008：bot 无「旅居」意图，随机迁居把 secondLife 抬到 14.5%
     g.dispatch({ t: 'relocate', to: rng.pick(['dali', 'nomad', 'beishang', 'changwu', 'hometown']) });
     return;
   }
@@ -461,7 +461,7 @@ function endingName(key: string): string {
 function buildReport(all: RunStats[], elapsedMs: number): string {
   const total = all.length;
   const lines: string[] = [];
-  lines.push('# OPC.exe 平衡模拟报告（S9）');
+  lines.push('# OPC.exe 平衡模拟报告');
   lines.push('');
   lines.push(`- 生成：2026-09-27 · ${BOTS.length} bot × ${OPENINGS.length} 开局 × ${SEEDS_PER_OPENING} 种子 = ${total} 局 · 720 天上限`);
   lines.push(`- 引擎：纯 core 无头跑（与 soak 同口径）· 总耗时 ${Math.round(elapsedMs / 1000)}s · 异常计数 ${all.reduce((a, r) => a + r.anomalies, 0)}`);
@@ -474,7 +474,7 @@ function buildReport(all: RunStats[], elapsedMs: number): string {
   }
   const passiveYear = all.filter(r => r.passiveWithinYear).length;
   const ord = [...byEnding.entries()].sort((a, b) => b[1] - a[1]);
-  lines.push('## 一、全体结局分布 vs 目标表（设计 §十二）');
+  lines.push('## 一、全体结局分布 vs 目标表');
   lines.push('');
   lines.push('| 结局 | 局数 | 占比 | 备注 |');
   lines.push('|---|---|---|---|');

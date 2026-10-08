@@ -1,4 +1,4 @@
-// S5 验收测试：80 条事件数据完整性 / 保留 id 契约 / 智能体事故 id 双向对齐 /
+// 事件数据测试：80 条事件数据完整性 / 保留 id 契约 / 智能体事故 id 双向对齐 /
 // 静态校验（真实 EVENT_DEFS 喂 validateChains·validateWhenReachable）/ 道德与灰产配额 /
 // NEWS_TICKER 时代锚点 / evalCond 冒烟
 import { describe, expect, it } from 'vitest';
@@ -34,7 +34,7 @@ function hasGrayTrue(c: Cond): boolean {
   return false;
 }
 
-/** 合法 EffectKey 白名单（与 applyEffects 支持键 + S5 增量键对齐） */
+/** 合法 EffectKey 白名单（与 applyEffects 支持键 + 增量键对齐） */
 const OK_EFFECT_KEY = new RegExp(
   '^(cash|debt|ap|stress|hiddenFatigue|burnoutCount|mood|sleep|diet|exercise|healthWhole|' +
   'info|cognition|character|rep|influence|power|compliance|creditScore|morality|' +
@@ -74,8 +74,8 @@ const byId = new Map(EVENT_DEFS.map(d => [d.id, d]));
 // 一、总量与去重
 // ============================================================
 
-describe('S5 数据总量', () => {
-  it('EVENT_DEFS 恰 81 条（[v0.10/W9] +作者彩蛋 egg-laijiacheng-site），id 无重复，findEventDef 可查', () => {
+describe('数据总量', () => {
+  it('EVENT_DEFS 恰 81 条（+作者彩蛋 egg-laijiacheng-site），id 无重复，findEventDef 可查', () => {
     expect(EVENT_DEFS.length).toBe(81);
     expect(new Set(EVENT_DEFS.map(d => d.id)).size).toBe(81);
     for (const d of EVENT_DEFS) expect(findEventDef(d.id)).toBe(d);
@@ -101,7 +101,7 @@ describe('S5 数据总量', () => {
 });
 
 // ============================================================
-// 二、NEWS_TICKER：顶栏新闻条（§7.4）
+// 二、NEWS_TICKER：顶栏新闻条
 // ============================================================
 
 describe('NEWS_TICKER', () => {
@@ -296,7 +296,7 @@ describe('灰产线 5+3', () => {
     expect(chainOf('gray-relay-crash')).toContain('gray-clearing-audit');
     expect(chainOf('gray-topup-lead')).toContain('gray-topup-settle');
     expect(chainOf('gray-topup-settle')).toContain('gray-clearing-legal');
-    // 清算链延迟 7-30 天（§9.6 集中清算）
+    // 清算链延迟 7-30 天（集中清算）
     const relayScale = byId.get('gray-relay-scale');
     for (const c of relayScale?.choices ?? []) {
       for (const s of c.chain ?? []) if (s.event === 'gray-relay-crash') {

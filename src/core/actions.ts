@@ -1,4 +1,4 @@
-// 行动执行器（技术文档 §5.4）：cond 检查 → S1 衰减 → healthMult → 特质/补丁/地点乘子 → effects 落账 → special 分支 → 日志飘字
+// 行动执行器：cond 检查 → S1 衰减 → healthMult → 特质/补丁/地点乘子 → effects 落账 → special 分支 → 日志飘字
 import { findAction, pricingMult } from '../data/actions.def';
 import { findLocation } from '../data/locations.def';
 import { agentBizMult, weekStatsOf } from './agents';
@@ -27,7 +27,7 @@ let contactSeq = 0;
 function addContact(s: StateSlice, type: 'peer' | 'client' | 'mentor' | 'vendor' | 'investor'): void {
   contactSeq += 1;
   s.contacts.push({
-    id: `c${s.meta.day}_${contactSeq}_${s.contacts.length}`, // [S8] 追加 length 分量：读档后计数器归零也能免 id 撞车
+    id: `c${s.meta.day}_${contactSeq}_${s.contacts.length}`, // 追加 length 分量：读档后计数器归零也能免 id 撞车
     name: NAMES[contactSeq % NAMES.length] ?? '路人',
     type,
     relation: 40,
@@ -40,7 +40,7 @@ function addContact(s: StateSlice, type: 'peer' | 'client' | 'mentor' | 'vendor'
 
 export interface EffectCtx {
   projectId?: string;
-  platformId?: string; // [S8] 内容营销选定的主平台（writeContent 官方管线发布目标）
+  platformId?: string; // 内容营销选定的主平台（writeContent 官方管线发布目标）
   rng?: Rng;
   mult?: number; // 行动乘子（S1 衰减/健康/焦点/补丁/特质合成）
 }
@@ -109,7 +109,7 @@ export function applyEffects(s: StateSlice, effects: readonly Effect[], ctx: Eff
         if (e.op === '+' && v > 0 && s.flags.zen === true) v *= 0.9; // 佛系：收入×0.9
         s.cash = e.op === '=' ? v : s.cash + v;
         s.flags.weekCashDelta = num(s.flags.weekCashDelta) + v;
-        // [v0.10/W2] 今日净流分项：正=发生时收入（serviceIn），负=行动/事件现金支出（otherOut）
+        // 今日净流分项：正=发生时收入（serviceIn），负=行动/事件现金支出（otherOut）
         if (e.op !== '=') {
           if (v > 0) s.dailyFlow.serviceIn += v;
           else s.dailyFlow.otherOut += -v;
@@ -154,7 +154,7 @@ export function applyEffects(s: StateSlice, effects: readonly Effect[], ctx: Eff
         s.assets.push({ id: `a${s.meta.day}_${s.assets.length + 1}`, name: '作品资产', kind: 'work', value: Math.max(0, Math.round(raw)), day: s.meta.day });
         break;
       }
-      default: break; // rep 之外的未知键忽略（S3 事件扩展点）
+      default: break; // rep 之外的未知键忽略（事件扩展点）
     }
   }
 }
@@ -168,7 +168,7 @@ function ensurePlatform(s: StateSlice, pid: string): PlatformAccount {
   return acc;
 }
 
-// ---------- 技能升级（§5.5） ----------
+// ---------- 技能升级 ----------
 
 const EXP_THRESHOLDS = [50, 120, 260, 480];
 
@@ -200,7 +200,7 @@ interface SpecialResult {
 }
 
 function pickPlatformId(s: StateSlice): string {
-  // [v0.10/W8] 修复：过滤已封禁账号（与 agents.primaryPlatformId 口径一致，否则发布动作会瞄准死号）
+  // 修复：过滤已封禁账号（与 agents.primaryPlatformId 口径一致，否则发布动作会瞄准死号）
   const entries = Object.entries(s.platforms).filter(([, a]) => a && a.state !== 'banned');
   if (entries.length === 0) return 'wechat';
   let best = entries[0];
@@ -279,7 +279,7 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       return { msg: `进度 ${Math.round(proj.progress)}%` };
     }
     case 'publishContent': {
-      // [S8] 选定主平台优先（一鱼八吃源头即首发平台）；未选则回退粉丝最多平台
+      // 选定主平台优先（一鱼八吃源头即首发平台）；未选则回退粉丝最多平台
       const pid = platformId ?? pickPlatformId(s);
       const r = publishContent(s, pid, rng);
       s.stats.contentPublished += 1;
@@ -287,7 +287,7 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       s.skillExp[dim] += Math.max(1, Math.round(6 * mult));
       checkSkillUp(s, dim);
       floats.push({ text: `粉丝+${r.followers}`, cls: 'good' });
-      // [v0.10/W8] 文案带具体数字（涨粉/变现都摊开）
+      // 文案带具体数字（涨粉/变现都摊开）
       return { msg: `发布到 ${pid}：${r.msg}（粉丝 +${r.followers}${r.income > 0 ? ` · 变现 +¥${r.income.toLocaleString('en-US')}` : ''}）`, floats };
     }
     case 'market': {
@@ -302,10 +302,10 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       if (!proj) return { fail: '需要项目' };
       const earnable = stageIdx(proj.stage) >= 2 || s.flags.ordersChannel === true;
       if (!earnable) return { fail: '项目需进入开发后阶段（或先建立订单渠道）' };
-      // [S9] 地点市场规模参与：一线单子更大（marketMult 1.35），小城 0.6——地理套利的手感落到实处
+      // 地点市场规模参与：一线单子更大（marketMult 1.35），小城 0.6——地理套利的手感落到实处
       const market = findLocation(s.location)?.marketMult ?? 1;
       const base = rng.int(1200, 2400);
-      // [v0.10/W4] 智能体业务加成：sales 在岗收入 +15%（butler +6%）+ growth 线索池接单加成（封顶 +15%）
+      // 智能体业务加成：sales 在岗收入 +15%（butler +6%）+ growth 线索池接单加成（封顶 +15%）
       const biz = agentBizMult(s);
       const skillF = 0.6 + 0.15 * s.skills.business;
       const qualityF = 0.7 + 0.3 * proj.quality / 100;
@@ -324,7 +324,7 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       s.deliveries[dim] += 1;
       checkSkillUp(s, dim);
       floats.push({ text: `+¥${income}`, cls: 'gold' });
-      // [v0.10/W8] 结果文案带具体数字：每一项乘子都摊开
+      // 结果文案带具体数字：每一项乘子都摊开
       const parts = [
         `底价 ¥${base}`,
         `× 商业Lv${s.skills.business} ${skillF.toFixed(2)}`,
@@ -332,7 +332,7 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
         `× 质量 ${qualityF.toFixed(2)}`,
         `× 市场 ${market.toFixed(2)}`
       ];
-      // [v0.10/体感修复] 智能体乘子标签只写真源：sales 在岗才写「销售+15%」，
+      // 智能体乘子标签只写真源：sales 在岗才写「销售+15%」，
       // 线索池加成来自 growth——样张实证：无 sales 时文案也带「销售」字样误导归因
       const agentParts: string[] = [];
       if (biz.deliverIncome > 1) agentParts.push(`销售+${Math.round((biz.deliverIncome - 1) * 100)}%`);
@@ -400,7 +400,7 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
       s.flags.deepRestedToday = true;
       return { msg: '彻底离线半天：睡眠+16 · 饮食+6 · 精力+30 · 隐性疲劳-15' };
     case 'earlySleep':
-      // [v0.10/W1] 22:30 早睡：立即结束今天（UI 消费此标记走「结束今天」入口）
+      // 22:30 早睡：立即结束今天（UI 消费此标记走「结束今天」入口）
       s.flags.earlySleptToday = true;
       s.flags.deepRestedToday = true;
       return { msg: '22:30 合上电脑（睡眠+15 · 压力-5 · 隐性疲劳-15）：今天到此为止', floats: [{ text: '早睡', cls: 'good' }] };
@@ -434,7 +434,7 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
 
 const STAGE_NAMES: Record<number, string> = { 1: 'v0.1 萌芽', 2: 'v0.2 求生', 3: 'v0.5 立定', 4: 'v1.0 成长', 5: 'v2.0 自由', 6: 'v3.0 传承' };
 
-/** 行动执行（§5.4 顺序）。硬撑路径：AP 不足仍执行非恢复行动 → 隐性疲劳+6；energy≤5 → burnoutCount+1 */
+/** 行动执行（顺序）。硬撑路径：AP 不足仍执行非恢复行动 → 隐性疲劳+6；energy≤5 → burnoutCount+1 */
 export function executeAction(
   s: StateSlice,
   a: { t: 'act'; id: string; projectId?: string; platformId?: string },
@@ -455,12 +455,12 @@ export function executeAction(
   if (def.needsProject && !proj) return { ok: false, msg: '需要先立项一个项目' };
   const nonRecovery = def.cat !== 'self';
   if (s.energy <= 0 && nonRecovery) return { ok: false, msg: '精力见底：请选最低日或恢复类行动' };
-  // [v0.10/W4] 注册代办智能体在岗：注册类行动（主体/商标/备案）现金成本 -30%（butler 编排再 -12%）
+  // 注册代办智能体在岗：注册类行动（主体/商标/备案）现金成本 -30%（butler 编排再 -12%）
   const isRegisterKind = def.special === 'registerEntity' || def.special === 'trademark' || def.special === 'icpFiling';
   const registerF = isRegisterKind ? agentBizMult(s).registerCost : 1;
   const cost = Math.round((def.cash ?? 0) * registerF * (s.flags.spendthrift === true ? 1.1 : 1));
   if (cost > 0 && s.cash < cost) return { ok: false, msg: `现金不足（需 ¥${cost}${registerF < 1 ? `（注册代办 -30% 已折算）` : ''}）` };
-  // [v0.10/W8] 修复「招外包」负现金缝：cash 走 effects 区间（-500~-3000）的行动需预留区间下限
+  // 修复「招外包」负现金缝：cash 走 effects 区间（-500~-3000）的行动需预留区间下限
   if (cost === 0) {
     const minCashEffect = def.effects.reduce((m, e) => {
       if (e.k !== 'cash' || e.op !== '+' || typeof e.v !== 'object') return m;

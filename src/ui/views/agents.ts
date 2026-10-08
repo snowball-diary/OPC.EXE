@@ -1,5 +1,5 @@
-// 智能体视图（S7，stage≥3 由 Tab 门控）：7 智能体卡（部署费/月 Token/效率/解锁/在岗+trust 条
-// + [v0.10/W4] 本周贡献 weekStats）+ Token 账单面板（[v0.10/W3] 昨日/本月累计/单价指数日结口径）
+// 智能体视图（stage≥3 门控）：7 智能体卡（部署费/月 Token/效率/解锁/在岗+trust 条
+// + 本周贡献 weekStats）+ Token 账单面板（昨日/本月累计/单价指数日结口径）
 // + 幽灵公司进度（autoLevel/六流程覆盖/空虚提示）。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
@@ -8,7 +8,7 @@ import type { AgentId, AgentWeekStats, StateSlice } from '../../core/types';
 import { AGENT_DEFS } from '../../data/agents.def';
 import { barHtml, numFmt, yuan } from '../fmt';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
 export const FLOW_LABELS: Record<string, string> = {
   growth: '获客', content: '内容', support: '客服', sales: '销售', fin: '财务合规', delivery: '交付'
@@ -22,7 +22,7 @@ export function priceIndexLabel(pi: number): { label: string; cls: string; tease
   return { label: `×${pi.toFixed(1)} 限流溢价`, cls: 'red', teaser: '限流溢价：Token 变成奢侈品，烧钱的自动化先停一停。' };
 }
 
-/** [v0.10/W4] 本周贡献文案（纯函数）：weekStats → 一行可读摘要 */
+/** 本周贡献文案（纯函数）：weekStats → 一行可读摘要 */
 export function weekContribText(ws: AgentWeekStats | undefined): string {
   if (!ws) return '本周贡献：还没开工';
   const parts: string[] = [];

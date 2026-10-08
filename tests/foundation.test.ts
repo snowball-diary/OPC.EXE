@@ -1,4 +1,4 @@
-// S1 验收测试：RNG / powerLaw / 七维开局 / 存档 roundtrip / localStorage 降级
+// 基础层测试：RNG / powerLaw / 七维开局 / 存档 roundtrip / localStorage 降级
 import { describe, expect, it, vi } from 'vitest';
 import { createRng, Rng } from '../src/core/rng';
 import { assertInvariants, createInitialSlice } from '../src/core/state';
@@ -91,9 +91,9 @@ describe('createInitialSlice：七维开局应用', () => {
 
   it('难度倍率与地点生活费生效，runway 正确', () => {
     const insane = createInitialSlice(setup({ difficulty: 'insane' }));
-    expect(insane.monthlyExpense).toBe(8750); // [S2] LIVING_BASE × 杭州1.0 × 1.25（[S9] LIVING_BASE 8000→7000）
+    expect(insane.monthlyExpense).toBe(8750); // LIVING_BASE × 杭州1.0 × 1.25（LIVING_BASE 8000→7000）
     const hometown = createInitialSlice(setup({ location: 'hometown' }));
-    expect(hometown.monthlyExpense).toBe(3500); // [S2] 7000 × 0.5 × 1.0（[S9] LIVING_BASE 7000）
+    expect(hometown.monthlyExpense).toBe(3500); // 7000 × 0.5 × 1.0（LIVING_BASE 7000）
     expect(hometown.runway).toBe(2.3); // (6000+2000)/3500
   });
 
@@ -111,7 +111,7 @@ describe('createInitialSlice：七维开局应用', () => {
     expect(createInitialSlice(setup({ cryptoOn: false })).flags.cryptoOn).toBe(false);
   });
 
-  it('赛道开局粉丝生效：kol → 小红书(xhs) observe 账号 500 粉（S8 修：平台 id 对齐 platforms.def）', () => {
+  it('赛道开局粉丝生效：kol → 小红书(xhs) observe 账号 500 粉（平台 id 已对齐 platforms.def）', () => {
     const s = createInitialSlice(setup({ niche: 'kol' }));
     const acc = s.platforms['xhs'];
     expect(acc).toBeDefined();
@@ -119,7 +119,7 @@ describe('createInitialSlice：七维开局应用', () => {
     expect(acc?.state).toBe('observe');
   });
 
-  it('基线与不变量：S2 起步、健康漂移按 §5.1、无不变量违规', () => {
+  it('基线与不变量：stage 1 起步、健康漂移按配比、无不变量违规', () => {
     const s = createInitialSlice(setup());
     expect(s.meta.stage).toBe(1);
     expect(s.meta.day).toBe(1);
@@ -200,10 +200,10 @@ describe('localStorage 不可用：降级内存，不抛异常', () => {
   });
 });
 
-describe('createGame / loadGame（S2 起接入真实引擎）', () => {
+describe('createGame / loadGame', () => {
   it('dispatch 未知行动返回 ok:false，advanceDay 返回带日志的报告', () => {
     const g = createGame(setup());
-    expect(g.dispatch({ t: 'act', id: 'deep_work' }).ok).toBe(false); // [S2] 不再是 NOT_IMPLEMENTED 桩
+    expect(g.dispatch({ t: 'act', id: 'deep_work' }).ok).toBe(false); // 真引擎下未知行动被拒
     const rep = g.advanceDay();
     expect(rep.day).toBe(1);
     expect(rep.logs.length).toBeGreaterThan(0);

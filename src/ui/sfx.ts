@@ -1,5 +1,5 @@
-// 方波芯片音效（技术文档 §14；WebAudio 零素材）
-// 原型 beep/sfx 全量迁移（click/coin/good/bad/kp/levelup/win/lose），S6 新增：
+// 方波芯片音效（WebAudio 零素材）
+// 原型 beep/sfx 全量迁移（click/coin/good/bad/kp/levelup/win/lose），扩充：
 //   alarm     双低音 2 声循环感（疲劳 level2 出现时）
 //   heartbeat 心悸事件弹窗（lub-dub 两下低频）
 //   tinnitus  s1-deep 进入时 1.2s 高频耳鸣
@@ -15,7 +15,7 @@ export interface SfxNote {
   v?: number;           // 音量 0-1（默认 0.06）
 }
 
-/** 具名音效乐谱（纯数据，tests/s6.test.ts 校验每个名字有音符） */
+/** 具名音效乐谱（纯数据，tests/ui-shell.test.ts 校验每个名字有音符） */
 export const SFX_SCORES: Record<string, SfxNote[]> = {
   click: [{ f: 880, d: 0.06 }],
   coin: [{ f: 990, d: 0.07 }, { f: 1320, d: 0.1, t: 0.07 }],
@@ -25,7 +25,7 @@ export const SFX_SCORES: Record<string, SfxNote[]> = {
   levelup: [523, 659, 784, 1046].map((f, i) => ({ f, d: 0.1, t: i * 0.1, type: 'triangle' as const, v: 0.08 })),
   win: [523, 659, 784, 1046, 1318, 1568].map((f, i) => ({ f, d: 0.15, t: i * 0.1, type: 'triangle' as const, v: 0.08 })),
   lose: [392, 330, 262, 196, 165].map((f, i) => ({ f, d: 0.22, t: i * 0.15, type: 'sawtooth' as const, v: 0.07 })),
-  // ---- S6 新增 ----
+  // ---- 扩充 ----
   alarm: [
     { f: 165, d: 0.18, v: 0.09 }, { f: 123, d: 0.18, t: 0.2, v: 0.09 },
     { f: 165, d: 0.18, t: 0.44, v: 0.09 }, { f: 123, d: 0.22, t: 0.64, v: 0.09 }

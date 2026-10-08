@@ -1,5 +1,5 @@
 // 健康子系统：健康合成 / 漂移与木桶 / 隐性疲劳 / 决策模式滞回 / 猝死掷骰 / 双强预警 / 恢复状态机
-// 规格来源：技术文档 §5.1-§5.3、§7（过劳·猝死·恢复三线）
+// 规格来源：-、（过劳·猝死·恢复三线）
 import { grantKp } from './state';
 import { findLocation } from '../data/locations.def';
 import type { Rng } from './rng';
@@ -9,7 +9,7 @@ const clamp100 = (n: number): number => Math.max(0, Math.min(100, n));
 
 export const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
 
-// ---------- 健康合成（§5.1） ----------
+// ---------- 健康合成 ----------
 
 /** health = sleep×0.40 + mood×0.25 + diet×0.20 + exercise×0.15 */
 export function composeHealth(h: HealthState): number {
@@ -34,7 +34,7 @@ export function apMaxFor(dayType: DayType, s?: StateSlice): number {
   return m;
 }
 
-// ---------- 每日漂移 + 木桶规则（§5.1） ----------
+// ---------- 每日漂移 + 木桶规则 ----------
 
 /**
  * 子项自然漂移：sleep -8（固定起床补丁内化则减半）/ mood -3+压力溢出/10 / diet -5 / exercise -6。
@@ -47,8 +47,8 @@ export function driftDay(s: StateSlice, dayType: DayType): string[] {
   h.sleep.v += fixedWake ? h.sleep.drift / 2 : h.sleep.drift;
   const overflow = Math.max(0, s.stress - 60) / 10;
   h.mood.v += h.mood.drift - overflow;
-  // [S8] 修 S1 遗留缝：LocationDef.stress（每日压力修正 -10~+10，locations.def/技术文档 §6 有数据
-  // 有文档）从未被引擎消费——一线城市压人、大理治愈的地理手感一直没生效。此处接线。
+  // LocationDef.stress（每日压力修正 -10~+10，locations.def 有表）
+  // 此前从未被引擎消费——一线城市压人、大理治愈的地理手感一直没生效。此处接线。
   s.stress = clamp100(s.stress + (findLocation(s.location)?.stress ?? 0));
   if (num(s.flags.travelBuffUntil) >= s.meta.day && num(s.flags.travelBuffUntil) > 0) h.mood.v += 2;
   h.diet.v += h.diet.drift;
@@ -75,7 +75,7 @@ export function driftDay(s: StateSlice, dayType: DayType): string[] {
   return barrel;
 }
 
-// ---------- 隐性疲劳（§5.3） ----------
+// ---------- 隐性疲劳 ----------
 
 /**
  * 扩展日 +8（工作狂减半）/ AP 耗尽仍行动 +6/次 / 睡眠<20 过夜 +10 / 最低日或深度休息 -15。
@@ -93,7 +93,7 @@ export function tickHiddenFatigue(s: StateSlice, dayType: DayType, actionsTaken:
   s.health.hiddenFatigue = clamp100(s.health.hiddenFatigue + d + ext);
 }
 
-// ---------- 决策模式滞回（§5.2） ----------
+// ---------- 决策模式滞回 ----------
 
 /**
  * 进入 S1：energy≤40 或 stress≥60；stress≥85 → system1Deep。
@@ -115,13 +115,13 @@ export function updateDecisionMode(s: StateSlice): void {
     else if (s.energy >= 55 && s.stress < 45 && gapOk) next = 'system2';
   }
   if (next !== prev) s.flags.modeChangeDay = s.meta.day;
-  if (prev === 'system2' && next !== 'system2') grantKp(s, 'system1'); // [S8] 首次跌落 System1 → 词条投递
+  if (prev === 'system2' && next !== 'system2') grantKp(s, 'system1'); // 首次跌落 System1 → 词条投递
   s.flags.prevMode = prev === 'system2' ? 0 : prev === 'system1' ? 1 : 2;
   s.decisionMode = next;
   s.flags.s1DeepDays = next === 'system1Deep' ? num(s.flags.s1DeepDays) + 1 : 0;
 }
 
-// ---------- 猝死（§7.2） ----------
+// ---------- 猝死 ----------
 
 /** P = min(0.12, 0.03 + 0.02×(hf-85)/5 + 0.03×hardStreakDays) */
 export function suddenDeathP(hiddenFatigue: number, hardStreakDays: number): number {
@@ -138,7 +138,7 @@ export function canRollSuddenDeath(s: StateSlice): boolean {
   );
 }
 
-/** 当前猝死概率（永远可算，前置不满足 = 0；概率对玩家公开显示 §7.3） */
+/** 当前猝死概率（永远可算，前置不满足 = 0；概率对玩家公开显示） */
 export function suddenDeathRisk(s: StateSlice): number {
   if (!canRollSuddenDeath(s)) return 0;
   return suddenDeathP(s.health.hiddenFatigue, s.hardStreakDays);
@@ -149,7 +149,7 @@ export function rollSuddenDeath(s: StateSlice, rng: Rng): boolean {
   return rng.chance(suddenDeathRisk(s));
 }
 
-// ---------- 双强预警（§7.3） ----------
+// ---------- 双强预警 ----------
 
 /** hiddenFatigue≥70 → level1；≥85 或已见心悸事件 → level2（顶栏黑底红字） */
 export function fatigueWarning(s: StateSlice): FatigueWarning | null {
@@ -164,17 +164,17 @@ export function fatigueWarning(s: StateSlice): FatigueWarning | null {
   return { level: 1, text: `隐性疲劳 ${read} —— 身体在记账，该还了` };
 }
 
-// ---------- 恢复状态机（§7.1 波动/中断线） ----------
+// ---------- 恢复状态机（波动/中断线） ----------
 
 /**
- * [S9] wobble 能量阈值 30 → 12：现行动表（10-15 精力 × 3AP）下正常满负荷日夜间谷值 10-25，
+ * wobble 能量阈值 30 → 12：现行动表（10-15 精力 × 3AP）下正常满负荷日夜间谷值 10-25，
  * 阈值 30 把「认真干了一天」恒判为波动 → 每 ~8 天一次中断 → recovery-interrupt 高风险支
  * （deny +1 过劳）→ 实测过劳倒下 34%（目标 5-8%）。12 让 wobble 回归「真·力竭」的例外语义。
  * energy<12 或连续 2 日 mood<40 → 'wobble'；flags.interrupted → 'interrupted'
  */
 export function recoveryState(s: StateSlice): RecoveryPhase {
   if (s.flags.interrupted === true) return 'interrupted';
-  // [S9] wobble 能量阈值 30 → 12：现行动表（10-15 精力 × 3AP）下正常满负荷日夜间谷值 10-25，
+  // wobble 能量阈值 30 → 12：现行动表（10-15 精力 × 3AP）下正常满负荷日夜间谷值 10-25，
   // 阈值 30 把「认真干了一天」恒判为波动 → 每 ~8 天一次中断 → recovery-interrupt 高风险支
   // （deny +1 过劳）→ 实测过劳倒下 34%（目标 5-8%）。12 让 wobble 回归「真·力竭」的例外语义。
   if (s.energy < 12 || num(s.flags.lowMoodDays) >= 2) return 'wobble';

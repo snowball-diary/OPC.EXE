@@ -1,11 +1,11 @@
-// 智能体矩阵（技术文档 §8.1，数字严格对齐表格；设计 §九）
-// replaces = 被接管的 ActionDef.domain；风险事件 id 由 S5 events.def 落地（引擎按 id 引用入队）
+// 智能体矩阵
+// replaces = 被接管的 ActionDef.domain；风险事件 id 由 events.def 落地（引擎按 id 引用入队）
 import type { AgentDef } from '../core/types';
 
 export const AGENT_DEFS: AgentDef[] = [
   {
     id: 'support', name: '客服智能体',
-    deployCost: 2000, monthlyTokenBase: 300, tokenPerUnit: 0.8, // 0.8/工单 [S9] base 400→300：智能体线回本期实测过长（sim 轮 1）
+    deployCost: 2000, monthlyTokenBase: 300, tokenPerUnit: 0.8, // 0.8/工单 base 400→300：智能体线回本期实测过长（sim 轮 1）
     replaces: ['cash'], efficiency: 0.9, unlockStage: 3,
     riskEvents: ['ag-support-hallucination', 'ag-support-complaint'], // 幻觉承诺/投诉升级
     desc: '自动消化客服答疑与工单：项目维护欠账每日自动下降。幻觉承诺是它的原罪。'
@@ -13,7 +13,7 @@ export const AGENT_DEFS: AgentDef[] = [
   {
     id: 'growth', name: '获客智能体',
     deployCost: 5000, monthlyTokenBase: 1000, tokenPerUnit: 2.0, // 2.0/千次触达
-    replaces: ['marketing'], efficiency: 1.0, unlockStage: 3, // [S9] 0.8→1.0：日均拉新 3-10 偏弱，账单/产出比失衡（sim 首轮）
+    replaces: ['marketing'], efficiency: 1.0, unlockStage: 3, // 0.8→1.0：日均拉新 3-10 偏弱，账单/产出比失衡（sim 首轮）
     riskEvents: ['ag-growth-riskcontrol', 'ag-growth-material'], // 批量行为风控/素材违规
     desc: '自动投放分发，每天给主平台拉新。批量行为是平台风控的最爱——banRisk 随用量累积。'
   },

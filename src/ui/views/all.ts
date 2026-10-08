@@ -1,9 +1,9 @@
-// 视图装配桶（S7）：import 即注册 8 个 Tab 视图 + 日志面板增强。
+// 视图装配桶：import 即注册 8 个 Tab 视图 + 日志面板增强。
 // main.ts 只需 `import './ui/views/all'`（壳层结构零改动）。
 //
 // 日志增强（不改动 main.ts renderLog）：
-//   ①MutationObserver 给【月结】【成就解锁】【知识点】等系统行加彩色徽标（颜色映射）
-//   ②点击日志中的知识点条目 → enqueueKpModal 弹 KP 弹窗
+//   MutationObserver 给【月结】【成就解锁】【知识点】等系统行加彩色徽标（颜色映射）
+//   点击日志中的知识点条目 → enqueueKpModal 弹 KP 弹窗
 import './status';
 import './projects';
 import './actions';

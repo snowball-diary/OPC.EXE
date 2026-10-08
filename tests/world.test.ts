@@ -1,4 +1,4 @@
-// S3 验收测试：Cond 求值 / 事件抽样（once·cooldown·心悸置顶）/ 连锁 / System1 过滤 /
+// 事件与外部引擎测试：Cond 求值 / 事件抽样（once·cooldown·心悸置顶）/ 连锁 / System1 过滤 /
 // 智能体（雇佣·Token 账单·trust·事故·幽灵公司·单位经济）/ 平台（observe·大爆小爆·封号·依赖·一鱼八吃）/ 灰产标记 / 静态校验
 import { describe, expect, it } from 'vitest';
 import { createInitialSlice } from '../src/core/state';
@@ -52,7 +52,7 @@ function findSeed(s: StateSlice, fn: (s: StateSlice, rng: Rng) => unknown, pred:
 // 一、Cond 求值器（全算子）
 // ============================================================
 
-describe('evalCond：结构化判别式联合（§9.1）', () => {
+describe('evalCond：结构化判别式联合', () => {
   it('全算子求值正确；flag 长度 2/4 两种形态区分', () => {
     const s = fresh();
     s.flags.married = true;
@@ -121,8 +121,8 @@ describe('evalCond：结构化判别式联合（§9.1）', () => {
 // 二、事件抽样：权重 / once / cooldown / 心悸置顶
 // ============================================================
 
-describe('rollEvents：抽样与队列（§9.2）', () => {
-  it('难度触发率内 weight 加权：450 独立种子两池都出现，权重高者更多（S5：改用正式事件 id）', () => {
+describe('rollEvents：抽样与队列', () => {
+  it('难度触发率内 weight 加权：450 独立种子两池都出现，权重高者更多', () => {
     const counts: Record<string, number> = {};
     for (let seed = 1; seed <= 600; seed++) {
       const s = fresh();
@@ -197,7 +197,7 @@ describe('rollEvents：抽样与队列（§9.2）', () => {
 // ============================================================
 
 describe('resolveChoice + 连锁 + System1 过滤（§9.3/§5.2）', () => {
-  it('choice effects 落账 + chain 延迟触发（2 日后危机到站；S5：改用正式事件 id 直接入队）', () => {
+  it('choice effects 落账 + chain 延迟触发（2 日后危机到站）', () => {
     const s = fresh();
     s.meta.stage = 2;
     ensureAccount(s, 'bilili').followers = 100;
@@ -243,7 +243,7 @@ describe('resolveChoice + 连锁 + System1 过滤（§9.3/§5.2）', () => {
     expect(rd.map(c => c.id)).toEqual(['declare']);
   });
 
-  it('正式事件全链路：危机事件选择→效果落账→事件标记已决→老张台词（S5：改用正式事件 id）', () => {
+  it('正式事件全链路：危机事件选择→效果落账→事件标记已决→老张台词', () => {
     const s = fresh();
     ensureAccount(s, 'bilili').followers = 100;
     const def = findEventDef('crisis-ai-crackdown');
@@ -267,8 +267,8 @@ describe('resolveChoice + 连锁 + System1 过滤（§9.3/§5.2）', () => {
     expect(cycles.length).toBeGreaterThan(0);
     expect(cycles[0]).toContain('a');
     expect(cycles[0]).toContain('b');
-    expect(validateChains(EVENT_DEFS)).toEqual([]); // S5 80 条正式数据无环
-    expect(validateWhenReachable(EVENT_DEFS)).toEqual([]); // S5 正式数据引用干净
+    expect(validateChains(EVENT_DEFS)).toEqual([]); // 80 条正式数据无环
+    expect(validateWhenReachable(EVENT_DEFS)).toEqual([]); // 正式数据引用干净
     const bad: EventDef = {
       id: 'bad', title: 'bad', body: '', cat: 'ai', when: [['agent', 'nonexistent' as 'support']], weight: 1,
       choices: [{ id: 'c', label: 'c', effects: [], results: '' }]
@@ -281,7 +281,7 @@ describe('resolveChoice + 连锁 + System1 过滤（§9.3/§5.2）', () => {
 // 四、智能体：雇佣 / Token 账单 / trust / 事故 / 幽灵公司 / 单位经济
 // ============================================================
 
-describe('智能体引擎（§8）', () => {
+describe('智能体引擎', () => {
   it('雇佣前置：阶段/现金/重复三重校验，扣款与 trust=60 记账', () => {
     const s = fresh();
     s.cash = 999999;
@@ -304,9 +304,9 @@ describe('智能体引擎（§8）', () => {
     const s = ready();
     hireAgent(s, 'support', createRng(1));
     s.tokenBill.priceIndex = 1.5;
-    expect(monthlyTokenBill(s, createRng(1))).toBeCloseTo(300 * 1.5, 10); // 无项目：base×pi（[S9] base 300）
+    expect(monthlyTokenBill(s, createRng(1))).toBeCloseTo(300 * 1.5, 10); // 无项目：base×pi（base 300）
     createProject(s, '工单源', 'saas', 'subscription', createRng(2));
-    // support: base 300 + 0.8×10 工单×1 = 308 → ×1.5（[S9] base 400→300）
+    // support: base 300 + 0.8×10 工单×1 = 308 → ×1.5（base 400→300）
     expect(monthlyTokenBill(s, createRng(1))).toBeCloseTo(308 * 1.5, 10);
     // growth：base 1000 + 2.0×千次触达(followersPeak 5000→5)×1 = 1010 → ×1.5
     hireAgent(s, 'growth', createRng(2));
@@ -318,7 +318,7 @@ describe('智能体引擎（§8）', () => {
     hireAgent(s2, 'support', createRng(1));
     hireAgent(s2, 'butler', createRng(2));
     s2.tokenBill.priceIndex = 1.5;
-    expect(monthlyTokenBill(s2, createRng(1))).toBeCloseTo((300 + 2500 + 30) * 1.5, 10); // 4245（[S9] base 300，编排抽成=其他×10%）
+    expect(monthlyTokenBill(s2, createRng(1))).toBeCloseTo((300 + 2500 + 30) * 1.5, 10); // 4245（base 300，编排抽成=其他×10%）
   });
 
   it('trust<40 效率减半：同种子 30 天，trust80 获客 ≈ trust30 的 2 倍', () => {
@@ -438,7 +438,7 @@ describe('智能体引擎（§8）', () => {
 // 五、平台：observe / 大爆小爆 / 封号 / 依赖 / 一鱼八吃
 // ============================================================
 
-describe('平台引擎（§10）', () => {
+describe('平台引擎', () => {
   it('observe 30 天→normal；观察期流量×0.4 且不变现', () => {
     const s = ready();
     const acc = ensureAccount(s, 'wechat');
@@ -470,7 +470,7 @@ describe('平台引擎（§10）', () => {
     const cash1 = s.cash;
     s.meta.day = 50;
     rollPlatformDay(s, createRng(99));
-    expect(s.cash - cash1).toBe(96); // [S9] 地点市场规模参与日变现：80×1.2
+    expect(s.cash - cash1).toBe(96); // 地点市场规模参与日变现：80×1.2
   });
 
   it('大爆小爆分段概率 sanity：1000 样本频率区间（0.90/0.09/0.01）', () => {
@@ -593,7 +593,7 @@ describe('平台引擎（§10）', () => {
     expect(s.pending.chains.some(c => c.event.startsWith('dist:'))).toBe(false);
   });
 
-  it('灰产 grayHistory：apiRelay 立项即永久标记（S2 钩子回归）', () => {
+  it('灰产 grayHistory：apiRelay 立项即永久标记', () => {
     const s = ready();
     const r = createProject(s, '中转站', 'apiRelay', 'usage', createRng(1));
     expect(r.ok).toBe(true);
@@ -609,11 +609,11 @@ describe('平台引擎（§10）', () => {
 // ============================================================
 
 describe('数据与整合', () => {
-  it('数据表完整性：7 智能体数字严格按 §8.1；8 平台按设计方案 §七', () => {
+  it('数据表完整性：7 智能体 / 8 平台数字与定义表一致', () => {
     expect(AGENT_DEFS.length).toBe(7);
     const byId = Object.fromEntries(AGENT_DEFS.map(a => [a.id, a]));
-    expect(byId['support']).toMatchObject({ deployCost: 2000, monthlyTokenBase: 300, tokenPerUnit: 0.8, efficiency: 0.9, unlockStage: 3 }); // [S9] base 400→300
-    expect(byId['growth']).toMatchObject({ deployCost: 5000, monthlyTokenBase: 1000, tokenPerUnit: 2.0, efficiency: 1.0, unlockStage: 3 }); // [S9] efficiency 0.8→1.0
+    expect(byId['support']).toMatchObject({ deployCost: 2000, monthlyTokenBase: 300, tokenPerUnit: 0.8, efficiency: 0.9, unlockStage: 3 }); // base 400→300
+    expect(byId['growth']).toMatchObject({ deployCost: 5000, monthlyTokenBase: 1000, tokenPerUnit: 2.0, efficiency: 1.0, unlockStage: 3 }); // efficiency 0.8→1.0
     expect(byId['content']).toMatchObject({ deployCost: 3000, monthlyTokenBase: 600, tokenPerUnit: 1.5, efficiency: 0.75, unlockStage: 4 });
     expect(byId['sales']).toMatchObject({ deployCost: 4000, monthlyTokenBase: 800, tokenPerUnit: 3.0, efficiency: 0.7, unlockStage: 4 });
     expect(byId['legalfin']).toMatchObject({ deployCost: 3500, monthlyTokenBase: 500, tokenPerUnit: 0, efficiency: 0.85, unlockStage: 4 });

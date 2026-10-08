@@ -1,6 +1,6 @@
-// 地理 8 地（设计方案 §8.2 / 技术文档 §一 locations.def）
+// 地理 8 地
 // costMult：月生活费系数（月生活费 = 1000 × costMult × 难度 livingCostMult）
-// creative/stress：创作类行动加成与每日压力修正（-10~+10），引擎 §6 流水线取用
+// creative/stress：创作类行动加成与每日压力修正（-10~+10），引擎 流水线取用
 import type { LocationDef } from '../core/types';
 
 export const LOCATION_DEFS: LocationDef[] = [

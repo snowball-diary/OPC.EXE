@@ -1,6 +1,5 @@
 // ============================================================
-// OPC.exe 全项目类型契约（S1 定稿，S2-S8 依此编码，只增不改）
-// 依据：技术文档.md §四/§五/§八/§九/§十一；设计方案.md §二/§四/§十三
+// OPC.exe 全项目类型契约（各引擎共用的类型来源，只增不改）
 // 纪律：禁 any；数值条目除 cash/debt/mrr/users 外均按 0-100 钳制
 // ============================================================
 
@@ -67,7 +66,7 @@ export interface AssetItem {
   day: number; // 获得日
 }
 
-/** 结局报告用累计量（宁多勿少，缺的字段 S8 结局系统再增） */
+/** 结局报告用累计量（宁多勿少，缺的字段结局系统再增） */
 export interface LifeStats {
   totalRevenue: number;
   totalExpense: number;
@@ -93,7 +92,7 @@ export interface LifeStats {
   eventsSeen: number;
   patchesInstalled: number;
   agentsHired: number;
-  leads: number; // [v0.10/W4] 累计销售线索（growth 智能体周产 1-3 条，交付加成封顶 +15%）
+  leads: number; // 累计销售线索（growth 智能体周产 1-3 条，交付加成封顶 +15%）
   endingsSeen: string[];
 }
 
@@ -123,10 +122,10 @@ export interface Project {
   alive: boolean;
   decayRate: number; // 每月自然衰减
   gray?: boolean; // 灰产项目（中转站等）：compliance 月度-3、稽查×2、grayHistory 永久记录
-  lastMonthMrr?: number; // [S2+] 上月 MRR（decline 检测：连续 2 月增长<2%）
-  stalledMonths?: number; // [S2+] 连续低增长月数
-  todayFlow?: number; // [v0.10/W2] 今日流水（settleProjectsDay 写入，日结）
-  todayUsers?: number; // [v0.10/W7] 今日新增用户（日折算收敛值）
+  lastMonthMrr?: number; // 上月 MRR（decline 检测：连续 2 月增长<2%）
+  stalledMonths?: number; // 连续低增长月数
+  todayFlow?: number; // 今日流水（settleProjectsDay 写入，日结）
+  todayUsers?: number; // 今日新增用户（日折算收敛值）
 }
 
 export interface ProjectType {
@@ -142,7 +141,7 @@ export interface ProjectType {
   desc?: string;
 }
 
-// ---------- 智能体与 Token（技术文档 §8.1） ----------
+// ---------- 智能体与 Token ----------
 
 export interface AgentDef {
   id: AgentId;
@@ -157,7 +156,7 @@ export interface AgentDef {
   desc?: string;
 }
 
-/** [v0.10/W4] 智能体本周贡献（周日清零重算，agents Tab「本周贡献」） */
+/** 智能体本周贡献（周日清零重算，agents Tab「本周贡献」） */
 export interface AgentWeekStats {
   followers: number; // 涨粉
   revenue: number; // 带来流水
@@ -172,7 +171,7 @@ export interface AgentInstance {
   hiredDay: number;
   usageScale: number; // 用量规模（业务量系数）
   trust: number; // 0-100；<40 效率减半
-  weekStats?: AgentWeekStats; // [v0.10] 缺省视为全零（旧档兼容）
+  weekStats?: AgentWeekStats; // 缺省视为全零（旧档兼容）
 }
 
 // ---------- 平台 ----------
@@ -197,7 +196,7 @@ export interface OSRuleDef {
   desc: string;
   installCost: { ap: number; energy: number; cash?: number };
   upkeep: number; // 月维护成本（cash）
-  effectFlags?: string[]; // [S2+] 行为记账 flag（当日执行判定 → streak 内化）
+  effectFlags?: string[]; // 行为记账 flag（当日执行判定 → streak 内化）
   effects?: Effect[];
 }
 
@@ -230,7 +229,7 @@ export type EffectKey =
   | 'projectUsers' | 'projectMrr' | 'projectMaintenance'
   | 'autoLevel' | 'tokenBill' | 'contacts' | 'attentionCap'
   | 'assetAdd'
-  // [S5+] 事件层增量键（engine owner 注意：applyEffects 目前走 default 静默忽略，需各补一行 case，规格见 S5 验收报告）
+  // 事件层增量键（engine owner 注意：applyEffects 目前走 default 静默忽略，需各补一行 case）
   | 'tokenPriceIndex' // Token 价格指数落点 = tokenBill.priceIndex：op '=' 直接写绝对值（0.6 降价 / 1.0 基线 / 1.5 涨价 / 2.0 限流溢价）
   | `flag.${string}`; // flag 记账：k = 'flag.<名称>'；op '=' 时 v=1→true、v=0→false、其余数值原样存（如 flag.privateDomain=0.5）；op '+' 一律置 true
 
@@ -240,7 +239,7 @@ export interface Effect {
   v: number | Range; // Range：引擎在该区间内经 RNG 抽值
 }
 
-/** 触发谓词（结构化 tuple，禁 eval；技术文档 §9.1） */
+/** 触发谓词（结构化 tuple，禁 eval */
 export type Cond =
   | ['stage', '>=', Stage]
   | ['cash', '<', number]
@@ -260,7 +259,7 @@ export type Cond =
   | ['day', '>=', number]
   | ['monthPhase', EconomyPhase];
 
-// ---------- 事件（技术文档 §九） ----------
+// ---------- 事件 ----------
 
 export type EventCat =
   | 'opportunity' | 'crisis' | 'platform' | 'finance'
@@ -318,8 +317,8 @@ export type ActionSpecial =
   | 'taxEvade' | 'registerEntity' | 'trademark' | 'icpFiling'
   | 'outsource' | 'writeSop' | 'automationBuild' | 'bizCoop'
   | 'exercise' | 'meditate' | 'deepRest' | 'socialize' | 'travel' | 'medical'
-  | 'setPrice' | 'bookkeeping' | 'payTax' // [S2+] 三档定价 / 自记账 / 报税
-  | 'earlySleep'; // [v0.10/W1] 22:30 早睡：立即结束今天（UI 消费 flags.earlySleptToday）
+  | 'setPrice' | 'bookkeeping' | 'payTax' // 三档定价 / 自记账 / 报税
+  | 'earlySleep'; // 22:30 早睡：立即结束今天（UI 消费 flags.earlySleptToday）
 
 export interface ActionDef {
   id: string;
@@ -342,7 +341,7 @@ export interface ActionDef {
 // ---------- 状态切片 ----------
 
 /**
- * [v0.10/W2] 今日现金流分项（日清零重算）：现金流每日可见，月底只做对账汇总。
+ * 今日现金流分项（日清零重算）：现金流每日可见，月底只做对账汇总。
  * 顶栏现金 hover / 财务 Tab 首行显示「今日净流」= 流入合计 − 流出合计。
  */
 export interface DailyFlow {
@@ -351,11 +350,11 @@ export interface DailyFlow {
   serviceIn: number; // 交付 / 事件 / 智能体销售等发生时现金收入
   livingOut: number; // 生活费日扣
   subsOut: number; // 工具订阅日扣
-  tokenOut: number; // Token 每日扣现（W3）
+  tokenOut: number; // Token 每日扣现
   otherOut: number; // 行动现金成本 / 税 / 杂项
 }
 
-/** [v0.10/W2] 投资盈亏记账：浮动市值每日累积，卖出才落袋（已实现单独统计） */
+/** 投资盈亏记账：浮动市值每日累积，卖出才落袋（已实现单独统计） */
 export interface InvestGains {
   realizedTotal: number; // 生涯累计已实现收益（卖出落袋）
   realizedMonth: number; // 本月已实现（月报口径，月结清零）
@@ -374,7 +373,7 @@ export interface StateSlice {
     endingKey?: string;
     seedState: RngState;
     schemaVersion: number;
-    difficulty: DifficultyId; // [S2+] 难度 id（livingCost 需要难度系数）
+    difficulty: DifficultyId; // 难度 id（livingCost 需要难度系数）
   };
   // 本体五元
   health: HealthState;
@@ -389,7 +388,7 @@ export interface StateSlice {
   contacts: Contact[];
   power: number;
   influence: number;
-  rep: number; // [S2+] 口碑/品牌 0-100（EffectKey 'rep' 的落点；§5.7 影响力合成用）
+  rep: number; // 口碑/品牌 0-100（EffectKey 'rep' 的落点；影响力合成用）
   // 资源层
   cash: number; // 允许负（负债另记 debt）
   energy: number; // 0-100
@@ -408,12 +407,12 @@ export interface StateSlice {
   agents: AgentInstance[];
     autoLevel: number; // 0-100，≥85 幽灵公司
     osRules: OSRuleState[];
-    tokenBill: { yesterday: number; monthToDate: number; priceIndex: number }; // [v0.10/W3] Token 日结：昨日 / 本月累计 / 单价指数（旧档 lastMonth → monthToDate 迁移）
+    tokenBill: { yesterday: number; monthToDate: number; priceIndex: number }; // Token 日结：昨日 / 本月累计 / 单价指数（旧档 lastMonth → monthToDate 迁移）
     portfolio: { cash: number; fund: number; bond: number; indexFund: number; stock: number; crypto: number; realEstate: number };
-    portfolioCost: { cash: number; fund: number; bond: number; indexFund: number; stock: number; crypto: number; realEstate: number }; // [v0.10/W2] 持仓成本（卖出算已实现收益）
-    investGains: InvestGains; // [v0.10/W2] 已实现 / 浮动盈亏记账
-    dailyFlow: DailyFlow; // [v0.10/W2] 今日现金流分项（日清零）
-    lastMonthReport?: MonthReport; // [v0.10/W8] 上月月报（财务 Tab 环比箭头）
+    portfolioCost: { cash: number; fund: number; bond: number; indexFund: number; stock: number; crypto: number; realEstate: number }; // 持仓成本（卖出算已实现收益）
+    investGains: InvestGains; // 已实现 / 浮动盈亏记账
+    dailyFlow: DailyFlow; // 今日现金流分项（日清零）
+    lastMonthReport?: MonthReport; // 上月月报（财务 Tab 环比箭头）
   debt: number;
   runway: number; // 月
   monthlyIncome: number;
@@ -423,7 +422,7 @@ export interface StateSlice {
   dayType: DayType;
   burnoutCount: number; // ==3 → 被动终局
   hardStreakDays: number; // 连续硬撑天数（猝死概率累积）
-  suddenDeathRisk: number; // 当前概率，对玩家公开显示（§7.3）
+  suddenDeathRisk: number; // 当前概率，对玩家公开显示
   focus: string | null; // 本周主焦点 actionId（+15%，其余 -10%）
   // 轨迹
   log: LogEntry[];
@@ -433,7 +432,7 @@ export interface StateSlice {
   flags: Record<string, boolean | number>; // 含 grayHistory/cryptoOn 等
 }
 
-// ---------- 开局七维（设计方案 §十三） ----------
+// ---------- 开局七维 ----------
 
 export interface SetupConfig {
   niche: NicheId;
@@ -539,7 +538,7 @@ export interface ActionResult {
 
 /** 全部玩家操作（ui 只 dispatch，core 唯一写者） */
 export type Action =
-  | { t: 'act'; id: string; projectId?: string; platformId?: PlatformId } // [S8] platformId：内容营销选主平台（writeContent 官方管线发布到该平台）
+  | { t: 'act'; id: string; projectId?: string; platformId?: PlatformId } // platformId：内容营销选主平台（writeContent 官方管线发布到该平台）
   | { t: 'invest'; kind: 'save' | 'fund' | 'bond' | 'indexFund' | 'stock' | 'crypto' | 'realEstate' | 'insurance' | 'repay' | 'funding'; amount: number }
   | { t: 'patch'; id: string }
   | { t: 'relocate'; to: LocationId }
@@ -553,7 +552,7 @@ export type Action =
   | { t: 'declareAI'; platform: PlatformId }
   | { t: 'setCrypto'; on: boolean };
 
-// ---------- 存档与随机（技术文档 §十一） ----------
+// ---------- 存档与随机 ----------
 
 /** RngState：mulberry32 内部状态（可序列化） */
 export interface RngState {
@@ -567,19 +566,19 @@ export interface SaveGame {
   createdAt: number;
   game: SerializedState;
   checksum: number; // FNV-1a(game)
-  author?: string; // [v0.10/W9] 溯源："Lai Jiacheng (c) 2026"（旧档缺失不致命，导入时警告）
-  product?: string; // [v0.10/W9] "OPC.exe"
+  author?: string; // 溯源："Lai Jiacheng (c) 2026"（旧档缺失不致命，导入时警告）
+  product?: string; // "OPC.exe"
 }
 
-// ---------- [S2+] 引擎结果类型（纯增量，不破坏既有契约） ----------
+// ---------- 引擎结果类型（纯增量，不破坏既有契约） ----------
 
-/** 周复盘瓶颈候选（§6.2：健康/现金流/获客/交付/技能/合规） */
+/** 周复盘瓶颈候选健康/现金流/获客/交付/技能/合规） */
 export type BottleneckKey = 'health' | 'cash' | 'marketing' | 'delivery' | 'skill' | 'compliance';
 
-/** 恢复状态机相位（§7.1：运行→波动→中断→最低日→稳定化→运行） */
+/** 恢复状态机相位运行→波动→中断→最低日→稳定化→运行） */
 export type RecoveryPhase = 'run' | 'wobble' | 'interrupted' | 'stabilized';
 
-/** 双强预警（§7.3：顶栏黑底红字） */
+/** 双强预警顶栏黑底红字） */
 export interface FatigueWarning {
   level: 1 | 2;
   text: string;
@@ -591,7 +590,7 @@ export interface BottleneckScore {
   score: number;
 }
 
-/** 三段复盘生成器输出（§6.2） */
+/** 三段复盘生成器输出 */
 export interface WeeklyReviewResult {
   facts: string[];
   hypotheses: string[];
@@ -599,13 +598,13 @@ export interface WeeklyReviewResult {
   candidates: BottleneckScore[];
 }
 
-/** 月结算报告（§6.3；[v0.10] investRealized/investFloat 已实现与浮动分列） */
+/** 月结算报告investRealized/investFloat 已实现与浮动分列） */
 export interface MonthReport {
   day: number;
   incomeProject: number;
   incomeService: number;
   incomeInvest: number; // 已实现（卖出落袋）
-  investFloat: number; // [v0.10/W2] 本月浮动盈亏（未落袋）
+  investFloat: number; // 本月浮动盈亏（未落袋）
   expenseLiving: number;
   expenseSubs: number;
   expenseUpkeep: number;
@@ -629,7 +628,7 @@ export interface EndingDef {
   color: LogEntry['cls'];
 }
 
-/** 五维人生报告（§十二：猝死时身心=0 且标缺） */
+/** 五维人生报告（猝死时身心=0 且标缺） */
 export interface LifeReport {
   dims: { finance: number; career: number; relations: number; bodymind: number; meaning: number };
   bodymindMissing: boolean;
@@ -638,13 +637,13 @@ export interface LifeReport {
   endingKey?: string;
 }
 
-// ---------- [S3+] 平台定义 / 单位经济面板 / 选项结算结果（纯增量，不破坏既有契约） ----------
+// ---------- 平台定义 / 单位经济面板 / 选项结算结果（纯增量，不破坏既有契约） ----------
 
-/** 平台定义（data/platforms.def.ts 用；设计方案 §七 政策表） */
+/** 平台定义（data/platforms.def.ts 用） */
 export interface PlatformDef {
   id: PlatformId;
   name: string;
-  flowMult: number; // 流量系数（§5.7 单条内容流量乘子）
+  flowMult: number; // 流量系数（单条内容流量乘子）
   flowVar?: number; // 流量方差（douyin 头部效应 >1；默认 1）
   delayHours: number; // 一鱼八吃分发延迟：0/24/72 → 当日/次日/三日三批
   banRiskBase: number; // 政策风险系数（xhs=1.6 最危险；site=0 封不了号）
@@ -653,7 +652,7 @@ export interface PlatformDef {
   note: string;
 }
 
-/** 单位经济面板（§8.2，UI S7 常驻显示） */
+/** 单位经济面板（UI 常驻显示） */
 export interface UnitEconomicsPanel {
   projectType: ProjectTypeId;
   price: number; // 客单价（类型价格区间中点）
@@ -667,7 +666,7 @@ export interface UnitEconomicsPanel {
   scaleCapNote: string;
 }
 
-/** 事件选项结算结果（UI S7 弹窗展示） */
+/** 事件选项结算结果（UI 弹窗展示） */
 export interface ChoiceResult {
   ok: boolean;
   msg: string; // results 文案

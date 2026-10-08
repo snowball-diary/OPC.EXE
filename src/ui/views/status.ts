@@ -1,4 +1,4 @@
-// 状态视图（S7）：本体五元（健康四子+合成+隐性疲劳/信息/认知/品性/技能五维×四级进度）
+// 状态视图：本体五元（健康四子+合成+隐性疲劳/信息/认知/品性/技能五维×四级进度）
 // + 衍生四元 + 决策模式徽章 + 阶段/恢复状态机 + 道德/合规/信用 + 周焦点
 // + 「主动结局」区（stage≥4，二次确认）+ 存档与系统（saves.ts）。
 import type { UiCtx } from '../registry';
@@ -17,7 +17,7 @@ import { loadSlot } from '../../save/save';
 import { SFX } from '../sfx';
 import { getGame } from '../runtime';
 
-// ---------- 纯函数（tests/s7.test.ts / s10 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts / s10 覆盖） ----------
 
 export interface HealthHint {
   key: 'sleep' | 'mood' | 'diet' | 'exercise';
@@ -25,7 +25,7 @@ export interface HealthHint {
   text: string; // 行动建议文案
 }
 
-/** [v0.10/W1] 健康区动态提示（纯函数）：哪个子项 <50 给对应行动建议 */
+/** 健康区动态提示（纯函数）：哪个子项 <50 给对应行动建议 */
 export function healthHints(s: Readonly<StateSlice>): HealthHint[] {
   const table: { key: HealthHint['key']; label: string; v: number; text: string }[] = [
     { key: 'sleep', label: '睡眠', v: s.health.sleep.v, text: '睡眠告急：今晚试试「22:30 早睡」（行动→身心）' },
@@ -71,7 +71,7 @@ export interface FatigueReadout {
   riskPct: number; // 猝死风险%（仅体检后公开）
 }
 
-/** 隐性疲劳读数（纯函数）：flags.fatigueKnown 解锁精确值与猝死风险（§7.3 公开值） */
+/** 隐性疲劳读数（纯函数）：flags.fatigueKnown 解锁精确值与猝死风险（公开值） */
 export function fatigueReadout(s: Readonly<StateSlice>): FatigueReadout {
   const hf = s.health.hiddenFatigue;
   const known = s.flags.fatigueKnown === true;

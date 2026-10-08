@@ -1,4 +1,4 @@
-// S2 验收测试：健康合成/滞回/隐性疲劳/猝死门控/行动器/技能升级/项目引擎/补丁/经济/结局 全链
+// 核心链路测试：健康合成/滞回/隐性疲劳/猝死门控/行动器/技能升级/项目引擎/补丁/经济/结局 全链
 import { describe, expect, it } from 'vitest';
 import { createInitialSlice } from '../src/core/state';
 import { assertInvariants } from '../src/core/state';
@@ -36,14 +36,14 @@ const fresh = (over: Partial<SetupConfig> = {}) => createInitialSlice(setup(over
 
 describe('行动表完整性（约 30 条四类）', () => {
   it('38 条行动：四类齐全、learn 三档、def 可查、[v0.10] 饮食五连', () => {
-    expect(ACTION_DEFS.length).toBe(38); // [v0.10/W1] 33 + eatWell/cook/takeout/coffee/earlySleep
+    expect(ACTION_DEFS.length).toBe(38); // 33 + eatWell/cook/takeout/coffee/earlySleep
     for (const cat of ['input', 'output', 'biz', 'self'] as const) {
       expect(ACTION_DEFS.some(a => a.cat === cat)).toBe(true);
     }
     expect(ACTION_DEFS.filter(a => a.special === 'learn').map(a => a.tier).sort())
       .toEqual(['easy', 'fit', 'hard']);
     expect(findAction('deepLearnFit')?.domain).toBe('skill');
-    // [v0.10/W1] 健康饮食模块五连
+    // 健康饮食模块五连
     expect(findAction('eatWell')?.effects[0]).toEqual({ k: 'diet', op: '+', v: 12 });
     expect(findAction('cook')?.cash).toBe(12);
     expect(findAction('takeout')?.ap).toBe(0);
@@ -68,7 +68,7 @@ describe('行动表完整性（约 30 条四类）', () => {
 });
 
 describe('健康：composeHealth / healthMult / driftDay', () => {
-  it('composeHealth 精确值（§5.1 配比）', () => {
+  it('composeHealth 精确值（配比）', () => {
     const s = fresh();
     s.health.sleep.v = 100; s.health.mood.v = 80; s.health.diet.v = 60; s.health.exercise.v = 40;
     expect(composeHealth(s.health)).toBeCloseTo(78, 10); // 40+20+12+6
@@ -102,7 +102,7 @@ describe('健康：composeHealth / healthMult / driftDay', () => {
     const s2 = fresh();
     s2.flags.travelBuffUntil = s2.meta.day + 5;
     driftDay(s2, 'standard');
-    expect(s2.health.mood.v).toBeCloseTo(70, 10); // 70-2+2（[S9] mood drift -3→-2）
+    expect(s2.health.mood.v).toBeCloseTo(70, 10); // 70-2+2（mood drift -3→-2）
   });
 });
 
@@ -131,7 +131,7 @@ describe('决策模式滞回（§5.2）', () => {
   });
 });
 
-describe('隐性疲劳全路径（§5.3）', () => {
+describe('隐性疲劳全路径', () => {
   it('扩展日+8 / 工作狂减半 / AP 耗尽仍行动+6/次 / 睡眠<20+10 / 深度休息-15', () => {
     const a = fresh();
     tickHiddenFatigue(a, 'extended', 0);
@@ -157,7 +157,7 @@ describe('隐性疲劳全路径（§5.3）', () => {
   });
 });
 
-describe('猝死：门控与概率（§7.2/§7.3）', () => {
+describe('猝死：门控与概率', () => {
   function suddenState(): ReturnType<typeof fresh> {
     const s = fresh();
     s.health.hiddenFatigue = 90;
@@ -213,7 +213,7 @@ describe('猝死：门控与概率（§7.2/§7.3）', () => {
   });
 });
 
-describe('行动执行器（§5.4）', () => {
+describe('行动执行器', () => {
   it('deepLearn 三档：easy 0 经验；fit 同种子确定性；hard 挫折或顿悟', () => {
     const a = fresh();
     const a0 = a.skillExp.craft; // dev 赛道自带 craft 经验 20
@@ -273,7 +273,7 @@ describe('行动执行器（§5.4）', () => {
     const res = executeAction(s, { t: 'act', id: 'deliverService' }, createRng(17));
     expect(res.ok).toBe(true);
     const income = s.cash - cashBefore;
-    // [S9] hangcheng marketMult 1.2 参与交付收入（地点机会补偿接线）
+    // hangcheng marketMult 1.2 参与交付收入（地点机会补偿接线）
     expect(income).toBeGreaterThanOrEqual(Math.round(1200 * 0.6 * 0.85 * 1.2));
     expect(income).toBeLessThanOrEqual(Math.round(2400 * 0.6 * 0.85 * 1.2));
     expect(s.stats.orders).toBe(1);
@@ -314,7 +314,7 @@ describe('行动执行器（§5.4）', () => {
   });
 });
 
-describe('技能升级（§5.5）', () => {
+describe('技能升级', () => {
   it('阈值 50/120/260/480；L3 需 3 次交付、L4 需 6 次', () => {
     const s = fresh();
     // dev 赛道 craft 自带 L1，改用营销维（开局 0 级）做阈值验证
@@ -356,7 +356,7 @@ describe('技能升级（§5.5）', () => {
   });
 });
 
-describe('项目引擎（§5.6）', () => {
+describe('项目引擎', () => {
   it('pmfTrue 幂律分布 sanity：200 样本钳 [5,95]，均值<40，70%<35（宽松 60%）', () => {
     const s = fresh();
     s.attentionCap = 250;
@@ -444,7 +444,7 @@ describe('项目引擎（§5.6）', () => {
   });
 });
 
-describe('OS 补丁（设计 §2.5）', () => {
+describe('OS 补丁', () => {
   it('同层槽位：stage1-2 共 2，stage5 共 6', () => {
     expect(layerSlots(1)).toBe(2);
     expect(layerSlots(3)).toBe(4);
@@ -485,7 +485,7 @@ describe('OS 补丁（设计 §2.5）', () => {
   });
 });
 
-describe('经济（§6.3/§6.4）', () => {
+describe('经济', () => {
   it('周期转移矩阵每行和 = 1', () => {
     for (const rows of Object.values(PHASE_TRANSITIONS)) {
       expect(rows.reduce((a, [, p]) => a + p, 0)).toBeCloseTo(1, 10);
@@ -517,7 +517,7 @@ describe('经济（§6.3/§6.4）', () => {
 
   it('livingCost：LIVING_BASE 7000 × 地点 × 难度', () => {
     const s = fresh({ location: 'hometown', difficulty: 'hard' });
-    expect(livingCost(s)).toBe(3850); // 7000×0.5×1.1（[S9] LIVING_BASE 7000）
+    expect(livingCost(s)).toBe(3850); // 7000×0.5×1.1（LIVING_BASE 7000）
   });
 
   it('invest dispatch：买/卖/超支拒绝/加密开关', () => {
@@ -544,12 +544,12 @@ describe('dispatch 路由（core/index）', () => {
 
   it('relocate：迁居费 = 月生活费×2，迁后重算生活费', () => {
     const g = createGame(setup());
-    expect(g.dispatch({ t: 'relocate', to: 'hometown' }).ok).toBe(false); // 8000 < 14000（[S9] 生活费 7000×2）
+    expect(g.dispatch({ t: 'relocate', to: 'hometown' }).ok).toBe(false); // 8000 < 14000（生活费 7000×2）
     (g.state as { cash: number }).cash = 30000;
     expect(g.dispatch({ t: 'relocate', to: 'hometown' }).ok).toBe(true);
     expect(g.state.location).toBe('hometown');
-    expect(g.state.monthlyExpense).toBe(3500); // [S9] 7000×0.5
-    expect(g.state.cash).toBe(30000 - 14000); // [S9] 迁居费 = 7000×2
+    expect(g.state.monthlyExpense).toBe(3500); // 7000×0.5
+    expect(g.state.cash).toBe(30000 - 14000); // 迁居费 = 7000×2
   });
 
   it('act exercise：AP/精力扣减、子项上涨', () => {
@@ -561,7 +561,7 @@ describe('dispatch 路由（core/index）', () => {
     expect(g.state.health.exercise.v).toBeGreaterThan(70);
   });
 
-  it('hireAgent：真实现后按阶段门拒绝（S3 替换桩：support 需 stage≥3）', () => {
+  it('hireAgent 按阶段门拒绝（support 需 stage≥3）', () => {
     const g = createGame(setup());
     const r = g.dispatch({ t: 'hireAgent', id: 'support' });
     expect(r.ok).toBe(false);
@@ -569,7 +569,7 @@ describe('dispatch 路由（core/index）', () => {
   });
 });
 
-describe('时间引擎（§6.1 11 步）', () => {
+describe('时间引擎（11 步）', () => {
   it('advanceDay 推进日期；day7 生成周复盘与主焦点事件；心悸预警入队；不变量全绿', () => {
     const s = fresh();
     const rng = createRng(3);
@@ -599,7 +599,7 @@ describe('时间引擎（§6.1 11 步）', () => {
   it('恢复状态机：wobble 两日 → 中断（停摆+强制最低日）→ 解除', () => {
     const s = fresh();
     expect(recoveryState(s)).toBe('run');
-    s.energy = 25; // [S9] wobble 阈值 30→12：25 已属正常日谷值，不再触发波动
+    s.energy = 25; // wobble 阈值 30→12：25 已属正常日谷值，不再触发波动
     expect(recoveryState(s)).toBe('run');
     s.energy = 10;
     expect(recoveryState(s)).toBe('wobble');
@@ -662,7 +662,7 @@ describe('时间引擎（§6.1 11 步）', () => {
   });
 });
 
-describe('结局与五维报告（§十二）', () => {
+describe('结局与五维报告', () => {
   it('17 结局全量：每个 check 都可被构造状态命中', () => {
     expect(ENDING_DEFS.length).toBe(17);
     for (const e of ENDING_DEFS) {
@@ -694,10 +694,10 @@ describe('结局与五维报告（§十二）', () => {
           if (p) p.pmfTrue = 90;
           break;
         }
-        case 'trueCalling': s.character = 85; s.morality = 80; s.stats.projectsDone = 3; break; // [v0.10/体感复核] 2→3：日结后带用户退役不再稀缺
+        case 'trueCalling': s.character = 85; s.morality = 80; s.stats.projectsDone = 3; break; // 2→3：日结后带用户退役不再稀缺
         case 'impactMany': s.influence = 80; s.stats.followersPeak = 100000; break;
-        case 'secondLife': s.location = 'dali'; s.monthlyIncome = 9000; s.monthlyExpense = 7000; s.morality = 60; break; // [S9] 生活费 7000
-        case 'saintOrHag': s.morality = 99; break; // [S9] 阈值 95→98
+        case 'secondLife': s.location = 'dali'; s.monthlyIncome = 9000; s.monthlyExpense = 7000; s.morality = 60; break; // 生活费 7000
+        case 'saintOrHag': s.morality = 99; break; // 阈值 95→98
         default: throw new Error(`未覆盖结局：${e.key}`);
       }
       expect(e.check?.(s) ?? false).toBe(true);

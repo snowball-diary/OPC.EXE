@@ -1,4 +1,4 @@
-// S7 验收测试：玩家可见面板的纯逻辑（无 DOM 依赖，vitest node 环境）
+// 玩家可见面板的纯逻辑（无 DOM 依赖，vitest node 环境）
 // 覆盖：向导草稿校验（特质超预算/未选完不能下一步/draft→SetupConfig 含 cryptoOn）/
 //       技能四级进度换算 / runway 颜色分档 / 单位经济面板映射 / 五维雷达坐标 /
 //       结局屏猝死分支 / 存档槽摘要 / 日志颜色映射与 KP 识别 / 行动禁用判定
@@ -66,7 +66,7 @@ function proj(over: Partial<Project> = {}): Project {
 
 // ---------- 1. 向导：特质点数预算 ----------
 
-describe('S7 向导：特质预算制（预算 3 点，负消耗/正返还）', () => {
+describe('向导：特质预算制（预算 3 点，负消耗/正返还）', () => {
   it('预算余量 = 3 + Σ(cost)', () => {
     expect(TALENT_BUDGET).toBe(3);
     expect(talentBudgetLeft([])).toBe(3);
@@ -88,7 +88,7 @@ describe('S7 向导：特质预算制（预算 3 点，负消耗/正返还）', 
 
 // ---------- 2. 向导：步骤校验与 SetupConfig 组装 ----------
 
-describe('S7 向导：未选完不能下一步 / draft→SetupConfig', () => {
+describe('向导：未选完不能下一步 / draft→SetupConfig', () => {
   it('空草稿前三步全部未完成，选完即通过', () => {
     const d = emptyDraft();
     expect(setupStepComplete(0, d)).toBe(false);
@@ -129,7 +129,7 @@ describe('S7 向导：未选完不能下一步 / draft→SetupConfig', () => {
 
 // ---------- 3. 技能四级进度换算 ----------
 
-describe('S7 状态页：技能四级进度换算', () => {
+describe('状态页：技能四级进度换算', () => {
   it('经验进度按阈值折算，L3/L4 有真实交付门槛', () => {
     expect(skillProgress(0, 25, 0)).toMatchObject({ pct: 50, blocked: undefined });
     expect(skillProgress(2, 260, 0).pct).toBe(100); // 经验够
@@ -144,7 +144,7 @@ describe('S7 状态页：技能四级进度换算', () => {
 
 // ---------- 4. Runway 颜色分档 + 被动覆盖 ----------
 
-describe('S7 财务页：runway 分档 / 自由线覆盖率', () => {
+describe('财务页：runway 分档 / 自由线覆盖率', () => {
   it('runway <3 红 / <6 橙 / 其余绿，负值红色警报', () => {
     expect(runwayBand(2.9).cls).toBe('red');
     expect(runwayBand(3.5).cls).toBe('orange');
@@ -162,7 +162,7 @@ describe('S7 财务页：runway 分档 / 自由线覆盖率', () => {
 
 // ---------- 5. 单位经济面板映射 ----------
 
-describe('S7 项目页：单位经济面板（autoSrv/灰产 Token 进货口径）', () => {
+describe('项目页：单位经济面板（autoSrv/灰产 Token 进货口径）', () => {
   it('毛利率 = (价−Token×指数−费率×价)/价，色条按档位', () => {
     const s = slice();
     const ue = unitEconomics(s, proj({ type: 'aiSupport' }));
@@ -187,7 +187,7 @@ describe('S7 项目页：单位经济面板（autoSrv/灰产 Token 进货口径�
 
 // ---------- 6. 五维雷达坐标 ----------
 
-describe('S7 结局屏：五维雷达坐标（纯 CSS/SVG）', () => {
+describe('结局屏：五维雷达坐标（纯 CSS/SVG）', () => {
   it('五顶点、起始角正上、半径按值缩放', () => {
     const vals = [
       { label: '财务', value: 100 }, { label: '事业', value: 50 }, { label: '关系', value: 0 },
@@ -207,7 +207,7 @@ describe('S7 结局屏：五维雷达坐标（纯 CSS/SVG）', () => {
 
 // ---------- 7. 结局屏：猝死分支 / 主动结局 ----------
 
-describe('S7 结局屏：猝死特殊处理与主动结局判定', () => {
+describe('结局屏：猝死特殊处理与主动结局判定', () => {
   it('suddenDeath → 黑屏 2s 引入 + 一行白字；其余直出报告', () => {
     expect(endingFlow('suddenDeath')).toBe('suddenIntro');
     expect(endingIntroLine('suddenDeath')).toContain('没有下一行');
@@ -242,7 +242,7 @@ describe('S7 结局屏：猝死特殊处理与主动结局判定', () => {
 
 // ---------- 8. 存档槽摘要 ----------
 
-describe('S7 存档管理：槽位摘要格式化', () => {
+describe('存档管理：槽位摘要格式化', () => {
   it('空槽位与损坏档', () => {
     expect(slotSummary(null)).toBe('空槽位');
     expect(slotSummary({ schemaVersion: 1, createdAt: 0, game: '{bad', checksum: 0 })).toBe('存档损坏（校验未过）');
@@ -267,7 +267,7 @@ describe('S7 存档管理：槽位摘要格式化', () => {
 
 // ---------- 9. 日志颜色映射与 KP 识别 ----------
 
-describe('S7 日志区：颜色映射 / 徽标 / 知识点点击识别', () => {
+describe('日志区：颜色映射 / 徽标 / 知识点点击识别', () => {
   it('cls → 颜色变量，未知落灰', () => {
     expect(logColor('good')).toBe('var(--green)');
     expect(logColor('bad')).toBe('var(--red)');
@@ -293,7 +293,7 @@ describe('S7 日志区：颜色映射 / 徽标 / 知识点点击识别', () => {
 
 // ---------- 10. 行动禁用判定 ----------
 
-describe('S7 行动页：禁用态与原因（镜像 executeAction 前置检查）', () => {
+describe('行动页：禁用态与原因（镜像 executeAction 前置检查）', () => {
   it('阶段不足 / 需要项目 / 最低日限制', () => {
     const s0 = slice();
     expect(actionDisabled(s0, findAction('registerOPC')!)).toContain('阶段不足');
@@ -325,7 +325,7 @@ describe('S7 行动页：禁用态与原因（镜像 executeAction 前置检查�
 
 // ---------- 11. 智能体面板与 Token 指数 ----------
 
-describe('S7 智能体页：Token 价格指数档位 / 幽灵公司模型', () => {
+describe('智能体页：Token 价格指数档位 / 幽灵公司模型', () => {
   it('priceIndex 四档文案', () => {
     expect(priceIndexLabel(0.6).label).toContain('降价红利');
     expect(priceIndexLabel(1.0).label).toContain('基线');
@@ -350,12 +350,12 @@ describe('S7 智能体页：Token 价格指数档位 / 幽灵公司模型', () =
 
 // ---------- 12. 财务三张账 ----------
 
-describe('S7 财务页：月损益三张账 / 主体税档', () => {
-  it('开局月：支出 = 生活费 7000 + 订阅 200 + 代账 300，无主体为灰色税态', () => { // [S9] LIVING_BASE 7000
+describe('财务页：月损益三张账 / 主体税档', () => {
+  it('开局月：支出 = 生活费 7000 + 订阅 200 + 代账 300，无主体为灰色税态', () => { // LIVING_BASE 7000
     const sheet = financeSheet(slice());
-    expect(sheet.expenseTotal).toBe(7500); // [S9] 7000+200+300
+    expect(sheet.expenseTotal).toBe(7500); // 7000+200+300
     expect(sheet.incomeTotal).toBe(0);
-    expect(sheet.profit).toBe(-7500); // [S9]
+    expect(sheet.profit).toBe(-7500); // 
     expect(sheet.grayTax).toBe(true); // entity none
     expect(entityNote('none')).toContain('灰色');
     expect(entityNote('sole')).toContain('3%');
@@ -365,7 +365,7 @@ describe('S7 财务页：月损益三张账 / 主体税档', () => {
 
 // ---------- 13. 状态页：疲劳读数 / 决策徽章 / 恢复状态 ----------
 
-describe('S7 状态页：隐性疲劳模糊区间 / 决策模式徽章 / 恢复状态机', () => {
+describe('状态页：隐性疲劳模糊区间 / 决策模式徽章 / 恢复状态机', () => {
   it('未体检显示模糊区间，体检后显示精确值与猝死风险', () => {
     const blind = slice(x => { x.health.hiddenFatigue = 73; });
     const b = fatigueReadout(blind);
@@ -398,7 +398,7 @@ describe('S7 状态页：隐性疲劳模糊区间 / 决策模式徽章 / 恢复�
 
 // ---------- 14. 图鉴 KP 行模型 ----------
 
-describe('S7 图鉴：知识点 32 条行模型', () => {
+describe('图鉴：知识点 32 条行模型', () => {
   it('seen 展开（全文+来源），未 seen 只留标题', () => {
     const rows = kpRows(slice(), key => key === 'niche');
     expect(rows).toHaveLength(32);

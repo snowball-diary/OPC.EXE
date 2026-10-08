@@ -1,4 +1,4 @@
-// OS 补丁引擎：安装（同层槽位）/ 每日执行记账（7 天内化，中断清半）/ 内化乘子（设计 §2.5）
+// OS 补丁引擎：安装（同层槽位）/ 每日执行记账（7 天内化，中断清半）/ 内化乘子
 import { findPatch, PATCH_MULTS } from '../data/patches.def';
 import { pushLog } from './state';
 import type { ActionResult, OSRuleState, StateSlice } from './types';

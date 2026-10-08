@@ -1,5 +1,5 @@
-// 像素办公室场景（S6）：192×108 canvas，CSS width:100% + image-rendering:pixelated。
-// 自原型「一人公司物语-增强版.html」drawScene 全量移植，并按技术文档 §13 升级：
+// 像素办公室场景：192×108 canvas，CSS width:100% + image-rendering:pixelated。
+// 自原型「一人公司物语-增强版.html」drawScene 全量移植，并按
 //   昼夜四相（按当日 AP 余量）/ 桌角智能体小人（雇佣即出现，butler 悬浮）/
 //   幽灵公司（角色移沙发位、机器人围绕桌子）/ System1 抖动 ±1px / 压力红滤镜 /
 //   energy<20 闭眼 / hiddenFatigue≥70 眼下发黑 / 窗外天际线随 location /
@@ -13,7 +13,7 @@ import { findLocation } from '../data/locations.def';
 import { getGame } from './runtime';
 import { isOpen as modalOpen } from './modal';
 
-// ---------- 状态→视觉映射表（tests/s6.test.ts 校验） ----------
+// ---------- 状态→视觉映射表（tests/ui-shell.test.ts 校验） ----------
 
 export const SCENE_MAP: Record<string, string> = {
   phase0_day: 'AP 充沛：蓝天白云（ap/apMax > 2/3）',
@@ -80,7 +80,7 @@ interface SceneRT {
 
 let rt: SceneRT | null = null;
 
-/** 显示器屏幕内容（S7 行动视图可调用） */
+/** 显示器屏幕内容（行动视图可调用） */
 export function setSceneActivity(m: SceneMode): void {
   if (rt) rt.activity = m;
 }

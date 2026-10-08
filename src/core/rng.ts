@@ -1,4 +1,4 @@
-// 种子 RNG：mulberry32（技术文档 §二：全部随机经此，可复现、可模拟、可序列化）
+// 种子 RNG：mulberry32（全部随机经此，可复现、可模拟、可序列化）
 import type { RngState } from './types';
 
 export interface Rng {
@@ -63,5 +63,5 @@ export function createRng(seed: number): Rng {
   return new Rng(seed);
 }
 
-/** 技术文档 §三 使用 RNG 泛指；别名保持一致 */
+/** 使用 RNG 泛指；别名保持一致 */
 export type RNG = Rng;

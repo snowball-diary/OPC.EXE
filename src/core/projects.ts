@@ -1,4 +1,4 @@
-// 项目引擎（技术文档 §5.6）：立项幂律抽取 / 每日被动流 / 月度收入结算（churn·月三魔咒·灰产合规）/ pivot / 退役
+// 项目引擎：立项幂律抽取 / 每日被动流 / 月度收入结算（churn·月三魔咒·灰产合规）/ pivot / 退役
 import { findProjectType, PROJECT_TYPES } from '../data/projects.def';
 import { num, phaseMult } from './economy';
 import { grantKp, pushLog } from './state';
@@ -40,7 +40,7 @@ export function createProject(
   const noise = Math.max(2, 30 - s.cognition * 0.25);
   projectSeq += 1;
   const p: Project = {
-    id: `p${s.meta.day}_${projectSeq}_${s.projects.length}`, // [S8] 追加 length 分量：读档后模块计数器归零也能免 id 撞车
+    id: `p${s.meta.day}_${projectSeq}_${s.projects.length}`, // 追加 length 分量：读档后模块计数器归零也能免 id 撞车
     name: name.trim() === '' ? `${t.name}#${projectSeq}` : name.trim(),
     type: t.id,
     revenueModel,
@@ -62,7 +62,7 @@ export function createProject(
     stalledMonths: 0
   };
   s.projects.push(p);
-  grantKp(s, 'mvp'); // [S8] 首次立项必送：最小可行产品词条（grantKp 幂等，只送一次）
+  grantKp(s, 'mvp'); // 首次立项必送：最小可行产品词条（grantKp 幂等，只送一次）
   if (p.gray) {
     s.flags.grayHistory = true; // 永久记录：尽调/稽查/道德线全部回查
     s.stats.grayDeals += 1;
@@ -75,7 +75,7 @@ export function createProject(
   return { ok: true, msg: `立项「${p.name}」`, project: p, floatTexts: [{ text: '立项', cls: 'gold' }] };
 }
 
-/** 项目日（维护账）：维护欠账每日 +0.2；收入侧见 settleProjectsDay（[v0.10] 日结） */
+/** 项目日（维护账）：维护欠账每日 +0.2；收入侧见 settleProjectsDay（日结） */
 export function tickProjectsDay(s: StateSlice, rng: Rng): void {
   void rng;
   for (const p of s.projects) {
@@ -85,7 +85,7 @@ export function tickProjectsDay(s: StateSlice, rng: Rng): void {
 }
 
 /**
- * [v0.10/W2] 项目日结：在营且已发布（launch+）的项目每日入账 mrr/30（±6% 日波动 rng），
+ * 项目日结：在营且已发布（launch+）的项目每日入账 mrr/30（±6% 日波动 rng），
  * 同时按日折算用户增长（月收敛 15% 的 1/30）。中断（停摆）时收入 ×0.3。
  * 今日流水写 p.todayFlow（项目日报/经营看板用），累计进 flags.monthProjAcc（月底对账）。
  */
@@ -132,7 +132,7 @@ export interface ProjectMonthResult {
 }
 
 /**
- * 项目月度结算（[v0.10] 对账版）：现金收入已逐日入账（settleProjectsDay），
+ * 项目月度结算（对账版）：现金收入已逐日入账（settleProjectsDay），
  * 此处做：日结累计 vs 月应收对账（差额修正）→ churn/用户/mrr 重算（下月日结基准）
  * → 衰减/灰产合规/decline 检测/月三魔咒 → 月维护扣款。
  */
@@ -160,7 +160,7 @@ export function settleProjectsMonth(s: StateSlice, rng: Rng): ProjectMonthResult
     }
     p.lastMonthMrr = p.mrr;
     if (earning) {
-      // [v0.10] churn：客服智能体在岗 −20%（butler 编排为其 40%）；用户增长已按日折算，此处只流失
+      // churn：客服智能体在岗 −20%（butler 编排为其 40%）；用户增长已按日折算，此处只流失
       const churnBase = 0.05 + Math.max(0, 60 - p.quality) / 200 + p.maintenance / 400;
       const supportOn = s.agents.some(a => a.id === 'support');
       const butlerOn = s.agents.some(a => a.id === 'butler');
@@ -178,7 +178,7 @@ export function settleProjectsMonth(s: StateSlice, rng: Rng): ProjectMonthResult
     }
     // 月三魔咒：第 3 个月 MRR 仍 <1000（调研：此后仅 12.3% 能到 1K）
     if (p.ageMonths === 3 && p.mrr < 1000) moonThree.push(p.name);
-    // 灰产：合规月度 -3（稽查×2 的权重由 S3 事件读 flags.grayHistory）
+    // 灰产：合规月度 -3（稽查×2 的权重由事件层读 flags.grayHistory）
     if (p.gray) s.compliance = Math.max(0, s.compliance - 3);
     // 衰减：quality 自然下滑；幽灵公司 ×1.5；维护欠账>70 额外 -2
     p.quality = clamp100(p.quality - p.decayRate * (s.autoLevel >= 85 ? 1.5 : 1));

@@ -1,4 +1,4 @@
-// 核心对外 API（技术文档 §三）：dispatch 全路由 + advanceDay 流水线 + 存档
+// 核心对外 API：dispatch 全路由 + advanceDay 流水线 + 存档
 // ui 只 dispatch，core 是唯一写者；serialize 纯逻辑复用 save/save.ts（localStorage 只在其槽位函数内）
 import { findLocation } from '../data/locations.def';
 import { RELOCATE_MULT } from '../data/economy.def';
@@ -89,15 +89,15 @@ function makeGame(state: StateSlice, rng: Rng): Game {
     dispatch(a: Action): ActionResult {
       const r = route(state, a, rng);
       clampAll(state);
-      // [S8] 引擎 RNG 状态回写切片：serialize→load 后 createRng(seedState.s) 才能无缝续跑
-      //（修 S1 遗留：seedState 停在开局态，读档会把随机流倒带回第 1 天）
+      // 引擎 RNG 状态回写切片：serialize→load 后 createRng(seedState.s) 才能无缝续跑
+      //（修早期版本遗留：seedState 停在开局态，读档会把随机流倒带回第 1 天）
       state.meta.seedState = rng.getState();
       return r;
     },
     advanceDay(): DayReport {
       const rep = advanceDayImpl(state, rng);
       clampAll(state);
-      state.meta.seedState = rng.getState(); // [S8] 同上
+      state.meta.seedState = rng.getState(); // 同上
       return rep;
     },
     serialize(): SaveGame {
@@ -111,14 +111,14 @@ export function createGame(setup: SetupConfig, rng?: Rng): Game {
   return makeGame(state, rng ?? createRng(setup.seed));
 }
 
-/** 旧版存档兜底：补齐 [S2+] 增量字段（rep/difficulty） */
+/** 旧版存档兜底：补齐增量字段（rep/difficulty） */
 function withDefaults(s: StateSlice): StateSlice {
   if (typeof s.rep !== 'number') s.rep = 0;
   if (!s.meta.difficulty) s.meta.difficulty = 'normal';
   if (!s.flags) s.flags = {};
   if (!s.stats.endingsSeen) s.stats.endingsSeen = [];
   if (typeof s.stats.leads !== 'number') s.stats.leads = 0;
-  // [v0.10/W3] tokenBill：lastMonth → { yesterday, monthToDate }（旧值并入本月累计）
+  // tokenBill：lastMonth → { yesterday, monthToDate }（旧值并入本月累计）
   const tb = s.tokenBill as StateSlice['tokenBill'] & { lastMonth?: number };
   if (tb && typeof tb.lastMonth === 'number') {
     const legacy = tb.lastMonth;
@@ -126,7 +126,7 @@ function withDefaults(s: StateSlice): StateSlice {
     tb.yesterday = tb.yesterday ?? 0;
     tb.monthToDate = (tb.monthToDate ?? 0) + legacy;
   }
-  // [v0.10/W2] 投资成本与盈亏记账、日流水结构（clampAll 内再兜底一次）
+  // 投资成本与盈亏记账、日流水结构（clampAll 内再兜底一次）
   if (!s.portfolioCost) s.portfolioCost = { ...s.portfolio };
   if (!s.investGains) s.investGains = { realizedTotal: 0, realizedMonth: 0, floatToday: 0, floatMonth: 0 };
   if (!s.dailyFlow) s.dailyFlow = { projIn: 0, passiveIn: 0, serviceIn: 0, livingOut: 0, subsOut: 0, tokenOut: 0, otherOut: 0 };

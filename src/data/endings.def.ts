@@ -1,5 +1,5 @@
-// 结局表：17 结局全量（技术文档 §十二映射 / 设计 §十二）
-// active 5：玩家主动触发（S4 结算面板写对应 flags）；passive 7：被动轮询；hidden 5：条件隐藏
+// 结局表：17 结局全量（映射 / ）
+// active 5：玩家主动触发（结算面板写对应 flags）；passive 7：被动轮询；hidden 5：条件隐藏
 import { composeHealth } from '../core/health';
 import type { EndingDef, StateSlice } from '../core/types';
 

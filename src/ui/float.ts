@@ -1,4 +1,4 @@
-// 飘字（S6 DOM 版，技术文档 §12：快照 diff 自动生成由 main.ts 的 uiDispatch 接线）
+// 飘字（DOM 版：快照 diff 自动生成，由 main.ts 的 uiDispatch 接线）
 // 叠在像素场景上方（#float-layer），右上起，向上淡出 1.6s；同屏最多 6 条，超出排队。
 export const FLOAT_MAX = 6;
 export const FLOAT_LIFE_MS = 1600;

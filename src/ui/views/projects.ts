@@ -1,4 +1,4 @@
-// 项目视图（S7→[v0.10/W7] 经营看板）：项目卡（阶段徽章/进度/PMF 置信区间/今日流水/日增用户/
+// 项目视图（经营看板）：项目卡（阶段徽章/进度/PMF 置信区间/今日流水/日增用户/
 // 维护负担条/生命周期 7 阶段时间轴）+ 新建项目 + 项目操作 + autoSrv/灰产的单位经济面板
 //（今日 Token 成本/今日毛利）+ 灰产清算风险累积条。
 import type { UiCtx } from '../registry';
@@ -9,7 +9,7 @@ import { PROJECT_TYPES, findProjectType } from '../../data/projects.def';
 import { pct, projectStageBadge, yuan } from '../fmt';
 import { iconHtml } from '../icons';
 
-// ---------- 纯函数（tests/s7.test.ts / s10 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts / s10 覆盖） ----------
 
 export const REVENUE_MODELS: readonly { id: RevenueModelId; label: string }[] = [
   { id: 'buyout', label: '买断' },
@@ -26,7 +26,7 @@ export function revenueModelLabel(id: RevenueModelId): string {
   return REVENUE_MODELS.find(m => m.id === id)?.label ?? id;
 }
 
-/** [v0.10/W7] PMF 置信区间格式化（纯函数）：估计 ±噪声（区间下限-上限）；认知越高立项时噪声越窄 */
+/** PMF 置信区间格式化（纯函数）：估计 ±噪声（区间下限-上限）；认知越高立项时噪声越窄 */
 export function pmfInterval(v: number, noise: number): string {
   const lo = Math.max(0, Math.round(v - noise));
   const hi = Math.min(100, Math.round(v + noise));
@@ -45,7 +45,7 @@ const STAGE_DOTS: readonly { stage: ProjectStage; label: string }[] = [
 
 export type StageDotState = 'done' | 'current' | 'future';
 
-/** [v0.10/W7] 生命周期时间轴状态（纯函数）：当前阶段高亮，之前 done，之后 future */
+/** 生命周期时间轴状态（纯函数）：当前阶段高亮，之前 done，之后 future */
 export function stageTimeline(stage: ProjectStage): { label: string; state: StageDotState }[] {
   const cur = STAGE_DOTS.findIndex(d => d.stage === stage);
   return STAGE_DOTS.map((d, i) => ({
@@ -54,13 +54,13 @@ export function stageTimeline(stage: ProjectStage): { label: string; state: Stag
   }));
 }
 
-/** [v0.10/W7] 灰产清算风险累积（纯函数）：ageMonths 与合规分共同决定，0-100 可视化 */
+/** 灰产清算风险累积（纯函数）：ageMonths 与合规分共同决定，0-100 可视化 */
 export function grayRiskScore(p: Project, compliance: number): number {
   if (!p.gray) return 0;
   return Math.max(0, Math.min(100, Math.round(25 + p.ageMonths * 6 + (70 - compliance) * 0.8)));
 }
 
-/** [v0.10/W7] autoSrv 今日 Token 成本/毛利（纯函数）：今日流水 × Token 成本占比 */
+/** autoSrv 今日 Token 成本/毛利（纯函数）：今日流水 × Token 成本占比 */
 export function todayUnitEconomics(todayFlow: number, cogsToken: number, price: number, priceIndex: number): { tokenCost: number; gross: number } {
   if (todayFlow <= 0 || price <= 0) return { tokenCost: 0, gross: 0 };
   const tokenShare = Math.min(1, (cogsToken * priceIndex) / price);
@@ -96,7 +96,7 @@ function projectCard(p: Project, s: StateSlice): string {
   const canPivot = p.alive;
   const ue = needsUnitEconomics(t) ? unitEconomics(s, p) : null;
   const band = ue ? marginBand(ue.grossMargin) : null;
-  // [v0.10/W7] 看板增量：今日流水 / 日增用户 / PMF 置信区间 / 时间轴 / 清算风险 / 今日单位经济
+  // 看板增量：今日流水 / 日增用户 / PMF 置信区间 / 时间轴 / 清算风险 / 今日单位经济
   const todayFlow = p.todayFlow ?? 0;
   const todayUsers = p.todayUsers ?? 0;
   const timeline = stageTimeline(p.stage);

@@ -1,8 +1,8 @@
-// 知识点词条 32 条（S4 内容数据层；技术文档 §18.1：每条注明现实来源，教育价值可溯源）
+// 知识点词条 32 条（每条注明现实来源，教育价值可溯源）
 // 规范：text 60-120 字、说人话、有数字或案例；source 必填（真实来源标注：行业调研/设计手记/一手实践）
 // 词条引用/呼应既有 def：niche 呼应 openings.def 六赛道；relay/topup 呼应 projects.def gray 类型；
 // platformRisk/aiDeclare/newAccount 呼应 platforms.def 政策表；entity/taxThree 呼应 actions.def 合规行动。
-// pending.kpQueue 存 key，弹窗时经 KP[key] 取词（UI S7）。
+// pending.kpQueue 存 key，弹窗时经 KP[key] 取词（UI）。
 
 export interface KpDef {
   key: string;

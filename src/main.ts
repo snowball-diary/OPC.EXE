@@ -1,10 +1,9 @@
-// OPC.exe 壳层启动（S6）：标题屏 → 开局向导桩（S7 替换为七步向导）→ 游戏屏
-// （顶栏 / 像素场景 / 8 Tab / 日志 / 底栏）→ 结局屏桩（S7 替换为人生报告）。
+// OPC.exe 壳层启动：标题屏 → 开局向导 → 游戏屏（顶栏 / 像素场景 / 8 Tab / 日志 / 底栏）→ 结局屏。
 // 纪律：所有玩家操作走 uiDispatch 包装（飘字/音效/自动存档/renderAll）；
 //       advanceDay 的 DayReport 在 onEndDay 消费（日志/新闻/事件弹窗/KP/结局）。
 import '@fontsource/press-start-2p';
 import './ui/styles.css';
-import './ui/views/all'; // S7：8 Tab 视图注册 + 日志增强（import 即装配）
+import './ui/views/all'; // 8 Tab 视图注册 + 日志增强（import 即装配）
 import {
   createGame, createRng, loadGame,
   type Action, type ActionResult, type SetupConfig, type StateSlice
@@ -45,7 +44,7 @@ const SPECIAL_SCENE: Record<string, SceneMode> = {
   userInterview: 'network', community: 'network', bizCoop: 'network',
   outsource: 'auto', writeSop: 'auto', automationBuild: 'auto',
   exercise: 'rest', meditate: 'rest', deepRest: 'rest', socialize: 'rest', travel: 'rest', medical: 'rest',
-  earlySleep: 'rest' // [v0.10/W1] 22:30 早睡
+  earlySleep: 'rest' // 22:30 早睡
 };
 
 function sceneModeForAction(id: string): SceneMode {
@@ -118,7 +117,7 @@ function uiDispatch(a: Action): ActionResult {
     }
   }
   refreshUi();
-  // [v0.10/W1] 22:30 早睡：立即结束今天（走既有「结束今天」入口，引擎标记由 UI 消费）
+  // 22:30 早睡：立即结束今天（走既有「结束今天」入口，引擎标记由 UI 消费）
   if (r.ok && a.t === 'act' && a.id === 'earlySleep' && g.state.flags.earlySleptToday === true) {
     onEndDay();
   }
@@ -136,7 +135,7 @@ function showTitle(): void {
   document.body.className = '';
   BGM.play('title'); // 标题曲（自动播放策略：首次交互后真正出声）
   if (!app) return;
-  // [v0.10/W5] 有档 **且** 未终局才可继续：终局后 auto 槽已清（或残留旧终局档）→ 禁用并说明
+  // 有档 **且** 未终局才可继续：终局后 auto 槽已清（或残留旧终局档）→ 禁用并说明
   const cont = canContinueFromSlot(loadSlot('auto'));
   app.innerHTML = `
     <section id="screen-title" class="screen active">
@@ -164,7 +163,7 @@ function showTitle(): void {
   });
 }
 
-// ---------- 开局向导（S7：七步向导在 src/ui/views/setup.ts，签名不变） ----------
+// ---------- 开局向导（七步向导在 src/ui/views/setup.ts） ----------
 
 function showSetup(): void {
   if (!app) return;
@@ -185,7 +184,7 @@ function continueGame(): void {
     processQueue();
     return;
   }
-  // [v0.10/W5] 双保险：终局档不允许从这里继续（结局屏会另开人生报告入口）
+  // 双保险：终局档不允许从这里继续（结局屏会另开人生报告入口）
   const cont = canContinueFromSlot(sv);
   if (!cont.ok) {
     enqueueNotice('无法继续', cont.reason, 'bad');
@@ -282,7 +281,7 @@ function onEndDay(): void {
   const after = makeFatigueModel(g.state);
   if (after && (!before || after.level > before.level)) SFX.alarm();
   // 事件 → 弹窗队列（心悸预警敲心跳）
-  // [S8] 修「幽灵事件」缝：不止 rep.events——advanceDay 半程（tickAgentsDay 事故/烧钱警报）
+  // 修「幽灵事件」缝：不止 rep.events——advanceDay 半程（tickAgentsDay 事故/烧钱警报）
   // 与白天 dispatch（publishContent → aiUndeclared）直接入 pending.events 的事件也必须浮出，
   // 否则玩家永远看不到弹窗、事件永远未决（还会被 enqueueEvent 去重挡住重发）。
   {
@@ -311,7 +310,7 @@ function onEndDay(): void {
   processQueue();
 }
 
-// ---------- 结局屏（S7：五维人生报告在 src/ui/ending.ts，签名不变） ----------
+// ---------- 结局屏（五维人生报告在 src/ui/ending.ts） ----------
 
 function showEnding(key: string): void {
   // 结局曲分流：金/紫=好结局曲；坏/体面=坏结局曲；粉（圣人或奸商）按道德档分流

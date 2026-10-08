@@ -1,5 +1,5 @@
-// 财务视图（S7）：今日净流（[v0.10/W2] 日结口径）+ 三张账（月损益预估：收入分项/支出分项/净额与税，
-// [v0.10/W8] 分项带环比箭头）+ Runway 大数字（<3 个月整块红框警示）+ 被动收入覆盖率（自由线 100%）
+// 财务视图：今日净流（日结口径）+ 三张账（月损益预估：收入分项/支出分项/净额与税，
+// 分项带环比箭头）+ Runway 大数字（<3 个月整块红框警示）+ 被动收入覆盖率（自由线 100%）
 // + 净资产/负债/信用分 + 主体形态与税档说明。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
@@ -10,7 +10,7 @@ import { findProjectType } from '../../data/projects.def';
 import type { MonthReport, StateSlice } from '../../core/types';
 import { barHtml, escapeHtml, numFmt, pct, yuan } from '../fmt';
 
-// ---------- 纯函数（tests/s7.test.ts / s10 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts / s10 覆盖） ----------
 
 export interface RunwayBand {
   cls: string;
@@ -25,7 +25,7 @@ export function runwayBand(runway: number): RunwayBand {
   return { cls: 'green', label: '健康' };
 }
 
-/** [v0.10/W8] 环比箭头（纯函数）：vs 上月同项；上月为 0 时显示「新」 */
+/** 环比箭头（纯函数）：vs 上月同项；上月为 0 时显示「新」 */
 export function momArrow(cur: number, prev: number | undefined): { text: string; cls: string } {
   if (prev === undefined || !Number.isFinite(prev)) return { text: '', cls: '' };
   if (prev === 0) return cur > 0 ? { text: '▲ 新增', cls: 'c-green' } : { text: '', cls: '' };
@@ -36,7 +36,7 @@ export function momArrow(cur: number, prev: number | undefined): { text: string;
   return { text: pctText, cls: ratio > 0 ? 'c-green' : 'c-red' };
 }
 
-/** [v0.10/W8] 月报环比行装配（纯函数）：当前月预估 sheet vs 上月月报（s.lastMonthReport） */
+/** 月报环比行装配（纯函数）：当前月预估 sheet vs 上月月报（s.lastMonthReport） */
 export function momRows(sheet: FinanceSheet, prev: MonthReport | undefined): { label: string; arrow: ReturnType<typeof momArrow> }[] {
   if (!prev) return [];
   const service = sheet.incomeRows[1]?.value ?? 0;
@@ -121,7 +121,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
   const rb = runwayBand(s.runway);
   const cov = passiveCoverage(sheet.incomeRows[2]?.value ?? 0, livingCost(s));
   const nw = netWorth(s);
-  // [v0.10/W2] 今日净流（日结口径）+ 昨日净流留档
+  // 今日净流（日结口径）+ 昨日净流留档
   const net = dailyNet(s.dailyFlow);
   const lastNet = typeof s.flags.lastDayNet === 'number' ? s.flags.lastDayNet : null;
   const arrows = momRows(sheet, s.lastMonthReport);

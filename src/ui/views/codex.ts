@@ -1,4 +1,4 @@
-// 图鉴视图（S7）：成就 24（解锁态）+ 结局图鉴 17（stats.endingsSeen 点亮）+ 知识点 32
+// 图鉴视图：成就 24（解锁态）+ 结局图鉴 17（stats.endingsSeen 点亮）+ 知识点 32
 //（见过=展开全文+来源；未见过=灰显标题）+ LifeStats 统计摘要。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
@@ -11,7 +11,7 @@ import { numFmt, yuan } from '../fmt';
 import { isKpSeen, markKpSeen } from '../kpseen';
 import { SFX } from '../sfx';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
 /** 成就图鉴行模型（纯函数） */
 export function achievementRows(s: Readonly<StateSlice>): { id: string; name: string; desc: string; on: boolean }[] {

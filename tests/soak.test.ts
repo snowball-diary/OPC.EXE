@@ -1,10 +1,10 @@
 // ============================================================
-// [S8] 全链路无头浸泡测试（本批核心产出）
+// 全链路无头浸泡测试（本批核心产出）
 // 不碰 DOM、纯 core：多策略加权随机机器人 × 8 开局 × 6 种子 × ≤720 天（≥48 局）。
-// 验收线（任务书 A）：
+// 通过标准：
 //   1. 零未捕获异常 + assertInvariants + NaN/undefined 巡检 + 第 100 天存档 roundtrip 等价续跑
 //   2. ≥5 种不同 endingKey；burnoutDown / bankrupt / backToWork 必须命中
-//   3. 猝死链：构造态 30 种子必有命中且概率符合 §7.2 公式区间；前置缺一全 false（回归）
+//   3. 猝死链：构造态 30 种子必有命中且概率符合 公式区间；前置缺一全 false（回归）
 //   4. 事件覆盖：全事件×全选项 swept；48 局累计触发 ≥40/80；关键事件（心悸/AI 未声明/
 //      烧钱警报/月三/灰产链）单独构造针对性用例
 //   5. 性能：单局 720 天 advanceDay 总耗时 <200ms（实际值打印）
@@ -227,7 +227,7 @@ function botDayType(g: Game, bot: Bot): void {
     return;
   }
   if (!bot.profile.relentless && (low < 45 || s.energy < 45 || (!bot.profile.pusher && s.health.hiddenFatigue >= 55))) {
-    // 身体亮红灯 → 明天最低日（§7.1 恢复节奏：最低日完成恢复行动全子项 +3、隐性疲劳 -15）
+    // 身体亮红灯 → 明天最低日（恢复节奏：最低日完成恢复行动全子项 +3、隐性疲劳 -15）
     g.dispatch({ t: 'dayType', dt: bot.rng.chance(0.9) ? 'minimum' : 'standard' });
     return;
   }
@@ -374,7 +374,7 @@ function playOne(opening: { name: string; cfg: SetupConfig; profile: BotProfile 
 
 // ---------- 测试体 ----------
 
-describe('[S8] soak：8 开局 × 6 种子无头浸泡', () => {
+describe('soak：8 开局 × 6 种子无头浸泡', () => {
   it('零未捕获异常 / 不变量 / NaN 巡检 / 存档 roundtrip（每开局 6 局）', () => {
     for (const opening of OPENINGS) {
       for (let seed = 1; seed <= 6; seed++) {
@@ -433,7 +433,7 @@ describe('[S8] soak：8 开局 × 6 种子无头浸泡', () => {
   });
 });
 
-describe('[S8] soak 充电：全事件 × 全选项直打 sweep（含 System1 无空选项检查）', () => {
+describe('soak 充电：全事件 × 全选项直打 sweep（含 System1 无空选项检查）', () => {
   it('80 事件 × 全选项：构造态强制入队直打，零异常、零不变量违规', () => {
     let seed = 0x5eed;
     for (const def of EVENT_DEFS) {
@@ -481,7 +481,7 @@ describe('[S8] soak 充电：全事件 × 全选项直打 sweep（含 System1 �
   });
 });
 
-describe('[S8] 读档续跑确定性（seedState 回写契约）', () => {
+describe('读档续跑确定性（seedState 回写契约）', () => {
   it('同一存档加载两个实例，同序操作 40 天后状态字节级一致（随机流无缝续接）', () => {
     const setup = cfg({ niche: 'dev', background: 'fired' }, 4242);
     const g = createGame(setup, createRng(setup.seed));
@@ -508,9 +508,9 @@ describe('[S8] 读档续跑确定性（seedState 回写契约）', () => {
   });
 });
 
-// ---------- 猝死链（§7.2 回归 + 概率区间） ----------
+// ---------- 猝死链（回归 + 概率区间） ----------
 
-describe('[S8] 猝死链：构造态 30 种子硬撑', () => {
+describe('猝死链：构造态 30 种子硬撑', () => {
   function suddenGame(seed: number): Game {
     const g = createGame(cfg({}, seed), createRng(seed));
     const s = g.state as StateSlice;
@@ -542,7 +542,7 @@ describe('[S8] 猝死链：构造态 30 种子硬撑', () => {
     console.info(`[soak] 猝死链：30 种子命中 ${hits}`);
     expect(hits).toBeGreaterThanOrEqual(1);
     expect(hits / 30).toBeLessThanOrEqual(1);
-    expect(Math.max(...risks)).toBeLessThanOrEqual(0.12 + 1e-9); // §7.2 封顶
+    expect(Math.max(...risks)).toBeLessThanOrEqual(0.12 + 1e-9); // 封顶
   });
 
   it('前置缺任一：30 种子全 false（回归确认，单掷层——漂移会让缺失前置在多日里自愈，与 s2 同口径）', () => {
@@ -564,7 +564,7 @@ describe('[S8] 猝死链：构造态 30 种子硬撑', () => {
 
 // ---------- 关键事件针对性用例 ----------
 
-describe('[S8] 关键事件针对性补齐', () => {
+describe('关键事件针对性补齐', () => {
   it('heartAttackWarn：hf≥70 置顶必出，三选项各结算一次', () => {
     for (let i = 0; i < 3; i++) {
       const g = createGame(cfg({}, 100 + i), createRng(100 + i));
@@ -699,7 +699,7 @@ describe('[S8] 关键事件针对性补齐', () => {
 
 // ---------- 结局「继续经营」复位契约（ending.ts 清理逻辑的 core 侧断言） ----------
 
-describe('[S8] 主动结局「继续经营」复位契约', () => {
+describe('主动结局「继续经营」复位契约', () => {
   it('清 chosen flag + over/endingKey + burnoutCount 后，被动轮询不再立刻拖回终局', () => {
     const g = createGame(cfg({}, 900), createRng(900));
     const s = g.state as StateSlice;

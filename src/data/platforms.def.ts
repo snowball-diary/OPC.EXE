@@ -1,4 +1,4 @@
-// 平台政策表（设计方案 §七：接入操作手册 v1.1 真实调研；技术文档 §10）
+// 平台政策表
 // banRiskBase=政策风险系数（xhs 最危险 1.6；site=0 封不了号）；mRate=日变现系数（元/粉/日）
 // delayHours=一鱼八吃分发延迟：0/24/72 → 当日/次日/三日三批
 import type { PlatformDef } from '../core/types';

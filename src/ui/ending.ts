@@ -1,7 +1,7 @@
-// 结局屏（S7）：五维人生报告（纯 CSS/SVG 雷达）+ verdict + overall + 关键数据 +
+// 结局屏：五维人生报告（纯 CSS/SVG 雷达）+ verdict + overall + 关键数据 +
 // 猝死特殊处理（黑屏 2s → 一行白字 → 报告，身心维度显示「——」）+ 成就清单 + 三个出口按钮。
 // 渲染为全屏覆盖层（#end-overlay）：游戏屏 DOM 保留在下面，主动结局「继续经营」可原局回场。
-// main.ts 的 showEnding 桩与状态页主动结局均调 renderEndingScreen(key)。
+// main.ts 的 showEnding 与状态页主动结局均调 renderEndingScreen(key)。
 import { achCount } from '../core/achievements';
 import { buildReport } from '../core/index';
 import type { LifeReport, StateSlice } from '../core/types';import { ACHIEVEMENT_DEFS } from '../data/achievements.def';
@@ -14,7 +14,7 @@ import { clearModals } from './modal';
 import { startScene, stopScene } from './scene';
 import { clearSlot, saveToSlot } from '../save/save';
 
-// ---------- 纯函数（tests/s7.test.ts 覆盖） ----------
+// ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
 export interface RadarPoint {
   x: number;
@@ -171,7 +171,7 @@ function bindOverlayButtons(overlay: HTMLElement): void {
     if (!g) return;
     SFX.good();
     // 主动结局回头（任务指定）：解除 over，清理结局触发 flag（否则下一天被动轮询会立刻再终局），
-    // 过劳计数复位，存档，撤覆盖层，原局回场。[S8] 修「继续经营后被结局 immediately 拖回」缝
+    // 过劳计数复位，存档，撤覆盖层，原局回场。修「继续经营后被结局 immediately 拖回」缝
     g.state.meta.over = false;
     g.state.meta.endingKey = undefined;
     for (const f of ['retireChosen', 'sellChosen', 'handoverChosen', 'pivotRestartChosen', 'backToWorkChosen']) {
@@ -192,7 +192,7 @@ function removeExistingOverlay(): void {
 }
 
 /**
- * 结局屏渲染入口（main.ts showEnding 桩的落地 + 状态页主动结局共用）。
+ * 结局屏渲染入口（main.ts showEnding 与状态页主动结局共用）。
  * 猝死：黑屏 2s → 一行白字 → 报告；其余直接出报告。
  */
 export function renderEndingScreen(key: string): void {
@@ -201,7 +201,7 @@ export function renderEndingScreen(key: string): void {
   document.body.className = '';
   removeExistingOverlay();
   const def = findEnding(key);
-  // [v0.10/W5] 终局型结局（非 active）→ 立即清除 auto 槽：标题屏「继续经营」不能再读回已结束的档；
+  // 终局型结局（非 active）→ 立即清除 auto 槽：标题屏「继续经营」不能再读回已结束的档；
   // 主动结局保留存档（「继续经营」回头入口需要它）。
   if (!isActiveEnding(key)) clearSlot('auto');
   if (def?.color === 'bad') SFX.lose();

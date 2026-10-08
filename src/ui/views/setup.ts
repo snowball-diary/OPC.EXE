@@ -1,6 +1,6 @@
-// 七步开局向导（S7）：赛道 → 背景 → 地点 → 难度 → 特质（3 点预算）→ 性格 → 确认。
-// 替换 main.ts 的 mountSetupWizard 桩（签名不变：mountSetupWizard(container, onDone)）。
-// 纯逻辑（预算校验/步骤完成判定/SetupConfig 组装）全部抽函数，tests/s7.test.ts 覆盖。
+// 七步开局向导：赛道 → 背景 → 地点 → 难度 → 特质（3 点预算）→ 性格 → 确认。
+// 入口 mountSetupWizard(container, onDone)。
+// 纯逻辑（预算校验/步骤完成判定/SetupConfig 组装）全部抽函数，tests/views.test.ts 覆盖。
 import type { SetupConfig } from '../../core/types';
 import {
   BACKGROUND_DEFS, DIFFICULTY_DEFS, NICHE_DEFS, PERSONALITY_DEFS, TALENT_DEFS,
@@ -299,7 +299,7 @@ function rerender(container: HTMLElement, onDone: (setup: SetupConfig) => void):
   render(container, onDone);
 }
 
-/** main.ts 调用入口（签名与 S6 桩一致） */
+/** main.ts 调用入口 */
 export function mountSetupWizard(container: HTMLElement, onDone: (setup: SetupConfig) => void): void {
   draft = emptyDraft();
   step = 0;

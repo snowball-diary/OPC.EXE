@@ -1,51 +1,6 @@
-// ============================================================
-// 视图注册表（S6 壳层）——技术文档 §12「registerView + deps 脏键重渲」
-// ============================================================
-//
-// ---------------- S6 → S7 交接（API 签名 + 挂载点 id 清单） ----------------
-//
-// 【挂载点 DOM id】（全部由 S6 main.ts/styles.css 提供，S7 直接填充内容）
-//   #screen-title          标题屏（S6 完成，S7 一般不动）
-//   #screen-setup          开局向导容器（S6 桩：默认配置直接开局；S7 换成七步向导，
-//                          在 src/main.ts 的 mountSetupWizard() 替换实现即可，签名不变）
-//   #screen-game           游戏屏
-//   #topbar                顶栏（S6 完成：日/版本/现金/精力/AP/注意力/压力/周期/新闻条/静音）
-//   #fatigue-banner        双强预警横幅（S6 完成，topbar 渲染）
-//   #scene                 192×108 像素场景 canvas（S6 完成）
-//   #float-layer           飘字层（S6 完成）
-//   #phase-badge/#ap-badge 场景角标（S6 完成）
-//   #tab-row               8 个 Tab 按钮条（S6 完成，stage 门控已做）
-//   #tab-content           Tab 视图容器（S7 的 8 个 View 渲染到这里）
-//   #log-panel #log-list   经营日志面板（容器已搭好并内置基础渲染，S7 可美化/过滤）
-//   #bottombar             底栏：日型三态钮 #dt-minimum/#dt-standard/#dt-extended +
-//                          #btn-endday「结束今天」（S6 完成）
-//   #modal-mask #modal     弹窗队列容器（S6 完成）
-//   #screen-end            结局屏（S6 桩：结局名+文案+重开按钮；S7 替换为完整人生报告）
-//
-// 【S7 注册视图】src/ui/registry.ts：
-//   import { registerView } from '../ui/registry';
-//   registerView({ id: 'projects', deps: ['projects', 'cash'], render(el, ctx) { ... } });
-//   —— id 必须是 TAB_IDS 之一：'status' | 'projects' | 'actions' | 'agents'
-//                           | 'contacts' | 'finance' | 'invest' | 'codex'
-//   —— deps: 状态脏键列表（键名自由约定，如 'cash'/'projects'/'health'/'agents'）。
-//            当前实现 dispatch 后统一 renderAll（性能足够），deps 字段已保留供优化：
-//            depHit(deps, dirtyKeys) 纯函数已导出，接入点在 main.ts 的 uiDispatch。
-//   —— ctx: UiCtx { state: Readonly<StateSlice>; dispatch(a: Action): ActionResult;
-//                   rerender(): void; sfx: typeof SFX }
-//            state 只读纪律：core 是唯一写者，S7 一律走 ctx.dispatch。
-//            选项过滤请调 ctx 内不经手的 core API：filterChoicesForUI(state, ev)（core/events）。
-//   —— 未注册的 Tab 自动渲染「施工中 · S7」占位；stage 未达显示「第 X 阶段解锁」。
-//      门控表：agents minStage 3 / invest minStage 5 / codex 常驻 / 其余常驻。
-//
-// 【S7 还要接的 S6 API】
-//   floatText(text, cls)                      飘字（src/ui/float.ts）
-//   enqueueNotice(title, body, cls)           提示弹层（src/ui/modal.ts）
-//   enqueueKpModal(key) / enqueueEventModal(ev, s)（src/ui/modal.ts）
-//   setSceneActivity('idle'|'build'|'market'|'deliver'|'auto'|'rest'|'learn'|'network')
-//                                             显示器屏幕动画（src/ui/scene.ts）
-//   SFX.play('coin') 等 12 个具名音效（src/ui/sfx.ts）
-//   getRng()                                  UI 视觉随机源（绝不可传给 core）
-// -----------------------------------------------------------
+// 视图注册表：registerView + 按脏键重渲
+// 挂载点 #tab-row / #tab-content 由 main.ts 提供；视图实现在 src/ui/views/，views/all.ts import 即装配。
+// 纪律：View.render 收到的 state 只读，一切写操作走 ctx.dispatch（core 是唯一写者）。
 
 import type { Action, ActionResult, StateSlice } from '../core/index';
 import type { Stage } from '../core/types';
@@ -114,7 +69,7 @@ export function isTabEnabled(id: string, stage: Stage): boolean {
   return tab ? stage >= tab.minStage : false;
 }
 
-/** deps 脏键命中（纯函数，S7 优化重渲用）：空 deps = 永远命中 */
+/** deps 脏键命中（纯函数）：空 deps = 永远命中 */
 export function depHit(deps: readonly string[], dirtyKeys: readonly string[]): boolean {
   if (deps.length === 0 || dirtyKeys.length === 0) return true;
   return deps.some(d => dirtyKeys.includes(d));
@@ -128,7 +83,7 @@ export function resolveTab(id: string, stage: Stage, hasView: boolean): 'view' |
 
 export function tabPlaceholderHtml(id: string): string {
   return `<div class="tab-placeholder">
-    <div class="ph-big">施工中 · S7</div>
+    <div class="ph-big">施工中</div>
     <div class="ph-small">视图槽位「${id}」已就绪：registerView({ id: '${id}', deps: [...], render })</div>
   </div>`;
 }
