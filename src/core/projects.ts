@@ -160,7 +160,7 @@ export function settleProjectsMonth(s: StateSlice, rng: Rng): ProjectMonthResult
     }
     p.lastMonthMrr = p.mrr;
     if (earning) {
-      // churn：客服智能体在岗 −20%（butler 编排为其 40%）；用户增长已按日折算，此处只流失
+      // churn：客服智能体在岗 -20%（butler 编排为其 40%）；用户增长已按日折算，此处只流失
       const churnBase = 0.05 + Math.max(0, 60 - p.quality) / 200 + p.maintenance / 400;
       const supportOn = s.agents.some(a => a.id === 'support');
       const butlerOn = s.agents.some(a => a.id === 'butler');

@@ -16,7 +16,7 @@ export const num = (v: unknown): number => (typeof v === 'number' ? v : 0);
 
 // ---------- 今日净流 ----------
 
-/** 今日净流（纯函数）：流入合计 − 流出合计（顶栏 hover / 财务 Tab 首行） */
+/** 今日净流（纯函数）：流入合计 - 流出合计（顶栏 hover / 财务 Tab 首行） */
 export function dailyNet(df: DailyFlow): number {
   return df.projIn + df.passiveIn + df.serviceIn - df.livingOut - df.subsOut - df.tokenOut - df.otherOut;
 }
@@ -102,7 +102,7 @@ export function tickPortfolioDay(s: StateSlice, rng: Rng): number {
 }
 
 /** invest dispatch：买/卖（amount<0 = 卖出）/还款/借款/投保。
- *  卖出按市值落袋，同时结转已实现收益 = 卖出市值 − 对应成本份额。 */
+ *  卖出按市值落袋，同时结转已实现收益 = 卖出市值 - 对应成本份额。 */
 export function applyInvest(s: StateSlice, a: Extract<Action, { t: 'invest' }>): ActionResult {
   if (s.meta.over) return { ok: false, msg: '生涯已结束' };
   const amt = Math.round(a.amount);
@@ -147,7 +147,7 @@ export function applyInvest(s: StateSlice, a: Extract<Action, { t: 'invest' }>):
     if (k !== 'cash') {
       const costShare = Math.min(s.portfolioCost[k], s.portfolioCost[k] * (sell / Math.max(1e-9, s.portfolio[k] + sell)));
       s.portfolioCost[k] -= costShare;
-      const realized = sell - costShare; // 市值落袋 − 成本份额（可为负）
+      const realized = sell - costShare; // 市值落袋 - 成本份额（可为负）
       s.investGains.realizedTotal += realized;
       s.investGains.realizedMonth += realized;
       return done(`卖出 ${a.kind} ¥${Math.round(sell)}（落袋盈亏 ${realized >= 0 ? '+' : ''}${Math.round(realized)}）`);

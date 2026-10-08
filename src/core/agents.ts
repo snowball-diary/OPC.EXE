@@ -42,9 +42,9 @@ export function resetAgentWeekStats(s: StateSlice): void {
 /** 业务加成查询：雇佣即生效、解雇即失效（butler=其他智能体效果的 40%） */
 export interface AgentBizMult {
   deliverIncome: number; // deliverService/谈单收入乘子（sales +15%，butler +6%）
-  registerCost: number; // 注册类行动现金成本乘子（regagent −30%，butler −12%）
+  registerCost: number; // 注册类行动现金成本乘子（regagent -30%，butler -12%）
   leadBonus: number; // 交付接单加成（growth 线索：min(+15%, 线索×1%)）
-  churnMult: number; // 项目月 churn 乘子（support −20%，butler −8%）——settleProjectsMonth 消费
+  churnMult: number; // 项目月 churn 乘子（support -20%，butler -8%）——settleProjectsMonth 消费
 }
 
 export function agentBizMult(s: StateSlice): AgentBizMult {
@@ -209,7 +209,7 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
         break;
       }
       case 'support': {
-        // 在营项目 maintenance 日 -0.8×eff（替代域）之外再 -0.5（数值加成），churn −20% 见 settleProjectsMonth
+        // 在营项目 maintenance 日 -0.8×eff（替代域）之外再 -0.5（数值加成），churn -20% 见 settleProjectsMonth
         const reliefTotal = 0.8 * eff + 0.5;
         let tickets = 0;
         for (const p of aliveProjects) {

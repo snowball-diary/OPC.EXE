@@ -342,7 +342,7 @@ export interface ActionDef {
 
 /**
  * 今日现金流分项（日清零重算）：现金流每日可见，月底只做对账汇总。
- * 顶栏现金 hover / 财务 Tab 首行显示「今日净流」= 流入合计 − 流出合计。
+ * 顶栏现金 hover / 财务 Tab 首行显示「今日净流」= 流入合计 - 流出合计。
  */
 export interface DailyFlow {
   projIn: number; // 项目日流水（订阅/按量日折算，settleProjectsDay）
@@ -659,7 +659,7 @@ export interface UnitEconomicsPanel {
   cogsToken: number; // 每单 Token 成本（×priceIndex）
   priceIndex: number;
   feeRate: number; // 平台费率（独立站 0，其余 0.05）
-  grossMargin: number; // 毛利率 =(price−cogs×pi−fee×price)/price，可为负（越自动化越亏）
+  grossMargin: number; // 毛利率 =(price-cogs×pi-fee×price)/price，可为负（越自动化越亏）
   usageScale: number;
   trustCapacity: number; // trust 承载 = max(1, trust/20)
   overTrustCapacity: boolean; // 超承载 → 项目 quality 月-5
