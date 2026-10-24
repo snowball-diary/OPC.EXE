@@ -2,10 +2,10 @@
 //
 // 职责：
 //   hireAgent/fireAgent       部署与停用（钱够+阶段够+未雇佣；trust=60 起步；停用即停止计费）
-//   tickAgentsDay             ①替代域自动执行（每日工作日志 purple + weekStats 本周贡献）
-//                             ②Token 日结扣现（当日用量×priceIndex，月底只汇总对账）
-//                             ③trust 月度结算 ④超承载质量惩罚 ⑤月度事故掷骰 ⑥幽灵公司与"意义的空虚"
-//   monthlyTokenBill          月账单 = Σ(base + perUnit×units×usageScale)×priceIndex（butler 编排抽成 10%）
+//   tickAgentsDay             (1)替代域自动执行（每日工作日志 purple + weekStats 本周贡献）
+//                             (2)Token 日结扣现（当日用量×priceIndex，月底只汇总对账）
+//                             (3)trust 月度结算 (4)超承载质量惩罚 (5)月度事故掷骰 (6)幽灵公司与"意义的空虚"
+//   monthlyTokenBill          月账单 = sum(base + perUnit×units×usageScale)×priceIndex（butler 编排抽成 10%）
 //   dailyTokenBill            月账单 / 30：每日扣现口径
 //   agentBizMult              业务加成查询（deliver 收入/注册成本等，挂 AgentInstance 生效）
 //   autoLevelScore            六关键流程接管度（获客/内容/客服/销售/财务合规/交付）→ autoLevel
@@ -155,7 +155,7 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
 
   if (weekStart) resetAgentWeekStats(s);
 
-  // --- ① 替代域行动的自动执行 + 每日工作日志（purple，具体数字可感知） ---
+  // --- (1) 替代域行动的自动执行 + 每日工作日志（purple，具体数字可感知） ---
   for (const a of s.agents) {
     const def = findAgent(a.id);
     if (!def) continue;
@@ -264,7 +264,7 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
     }
   }
 
-  // --- ①b Token 日结：当日用量×priceIndex 扣现（月底只汇总对账，不再大额扣款） ---
+  // --- (1)b Token 日结：当日用量×priceIndex 扣现（月底只汇总对账，不再大额扣款） ---
   const dayBill = dailyTokenBill(s);
   s.tokenBill.yesterday = dayBill; // 日账单为 0 也刷新（停用全部智能体后「昨日」仍显示旧非零账单会误导排查）
   if (dayBill > 0) {
@@ -280,13 +280,13 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
 
   if (!monthBoundary) return;
 
-  // --- ② trust 月度结算：上月无事故 +5 ---
+  // --- (2) trust 月度结算：上月无事故 +5 ---
   for (const a of s.agents) {
     if (s.flags[`agAcc_${a.id}`] !== true) a.trust = Math.min(100, a.trust + 5);
     s.flags[`agAcc_${a.id}`] = false;
   }
 
-  // --- ③ 超承载：usageScale > trust 承载 → 项目 quality 月-5（质量衰减阈值） ---
+  // --- (3) 超承载：usageScale > trust 承载 → 项目 quality 月-5（质量衰减阈值） ---
   for (const a of s.agents) {
     const def = findAgent(a.id);
     if (!def) continue;
@@ -303,7 +303,7 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
     if (a.id === 'regagent') s.compliance = clamp01(s.compliance + 2);
   }
 
-  // --- ④ 事故掷骰（月度，风险事件入 pending 队列 + trust-20） ---
+  // --- (4) 事故掷骰（月度，风险事件入 pending 队列 + trust-20） ---
   for (const a of s.agents) {
     const def = findAgent(a.id);
     if (!def) continue;
@@ -318,7 +318,7 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
     pushLog(s, `智能体事故：「${def.name}」触发风险事件（trust -20）。你需要人工盯住它了。`, 'bad');
   }
 
-  // --- ⑤ 幽灵公司对价：月度"意义的空虚"（无亲自创作/见客户 → mood-3，） ---
+  // --- (5) 幽灵公司对价：月度"意义的空虚"（无亲自创作/见客户 → mood-3，） ---
   if (s.flags.ghostCompany === true) {
     const curMonth = Math.floor((s.meta.day - 1) / 30);
     const outDay = num(s.flags.lastOutputDay);
@@ -372,7 +372,7 @@ function agentMonthlyUnits(s: StateSlice, id: AgentId, alive: number): number {
   }
 }
 
-/** 月账单 = Σ(base + perUnit×units×usageScale)×priceIndex；butler 对其他智能体账单抽成 10% */
+/** 月账单 = sum(base + perUnit×units×usageScale)×priceIndex；butler 对其他智能体账单抽成 10% */
 export function monthlyTokenBill(s: StateSlice, rng?: Rng): number {
   void rng;
   const pi = s.tokenBill.priceIndex;

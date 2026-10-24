@@ -1,8 +1,8 @@
 // KP 词条「已见」记录：
 // 「已读」不再存会话级内存，而是经 core/state.grantKp 落 state.flags['kp_'+key]
 //      ——存档天然携带，刷新/读档后图鉴点亮不丢。
-// 记录两个来源：①core 引擎投递（事件入队 → pending.kpQueue → main.ts 弹窗）
-//              ②图鉴页主动展开全文（codex 视图点击，只记账不入队，避免重复弹窗）。
+// 记录两个来源：(1)core 引擎投递（事件入队 → pending.kpQueue → main.ts 弹窗）
+//              (2)图鉴页主动展开全文（codex 视图点击，只记账不入队，避免重复弹窗）。
 // kpKeyFromTitle / kpKeyFromLog 纯函数保留（tests/views.test.ts 覆盖）。
 import { grantKp } from '../core/index';
 import { KP_DEFS } from '../data/kp.def';

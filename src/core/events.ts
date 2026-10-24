@@ -78,8 +78,8 @@ export function rollEvents(s: StateSlice, rng: Rng): PendingEvent[] {
  *  旧实现：['random','<',p] 与普通 when 一起求值一次，通过后还要再跟全部候选拼 weight 抽样——
  *  名义命中率 p 被抽样竞争二次稀释（如黑天鹅 3% 实测远低于 3%/抽样日），长线事件几乎见不到。
  *  现拆两层：
- *  ① 普通条件全过 + random 条件**独立掷点全中** → 进直通池，按 weight 在直通池内抽 1（不再与全池竞争）；
- *  ② 直通池为空 → 在无 random 门槛的事件里按 weight 抽 1（原行为）。
+ *  (1) 普通条件全过 + random 条件**独立掷点全中** → 进直通池，按 weight 在直通池内抽 1（不再与全池竞争）；
+ *  (2) 直通池为空 → 在无 random 门槛的事件里按 weight 抽 1（原行为）。
  *  moon-three / recovery-interrupt / weekly-focus 的 when=[random<0] 依旧恒假，永不入抽样池（forced 专用）。
  *  evalCond 语义未动（连锁 ifCond / 校验器仍走原路径），改动仅限抽样层。 */
 interface WhenParts { base: Cond[]; probs: number[] }
@@ -192,9 +192,9 @@ export function tickChains(s: StateSlice, rng: Rng): PendingEvent[] {
 // ---------- System1 选项过滤（渲染层直接调用，/） ----------
 
 /**
- * 三规则：①非 System2 时 requires:'system2' 的选项剔除
- *        ②非 System2 时 s1Variant 替换文案
- *        ③system1Deep 强制无"取消"（id/label 含 取消|cancel 的选项剔除）
+ * 三规则：(1)非 System2 时 requires:'system2' 的选项剔除
+ *        (2)非 System2 时 s1Variant 替换文案
+ *        (3)system1Deep 强制无"取消"（id/label 含 取消|cancel 的选项剔除）
  */
 export function filterChoicesForUI(s: StateSlice, ev: EventDef): ChoiceDef[] {
   const mode = s.decisionMode;

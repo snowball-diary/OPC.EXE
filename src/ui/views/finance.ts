@@ -84,7 +84,7 @@ export function financeSheet(s: Readonly<StateSlice>): FinanceSheet {
     { label: '生活费（地点×难度系数）', value: livingCost(s) },
     { label: '工具订阅', value: monthlySubs(s) },
     { label: '代账费', value: bookkeepingFee(s) },
-    { label: '项目月维护（Σ类型基线）', value: projectUpkeep },
+    { label: '项目月维护（sum类型基线）', value: projectUpkeep },
     { label: 'Token 账单（月累计）', value: Math.round(s.tokenBill.monthToDate) },
     { label: 'OS 补丁维护', value: Math.round(upkeep) }
   ];

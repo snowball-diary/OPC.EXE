@@ -503,10 +503,10 @@ function buildReport(all: RunStats[], elapsedMs: number): string {
   lines.push('');
   lines.push('| 里程碑 | 到达数 | 占比 | 目标 |');
   lines.push('|---|---|---|---|');
-  lines.push(`| 平凡线（最高停留在 ②③阶段） | ${mundane} | ${pct(mundane, total)} | ≈55%±8 |`);
-  lines.push(`| 成长期（最高到 ④，月 3 万+） | ${stageReach(4)} | ${pct(stageReach(4), total)} | ≈20% |`);
-  lines.push(`| 自由期（最高到 ⑤，被动覆盖） | ${stageReach(5)} | ${pct(stageReach(5), total)} | ≈4%±2 |`);
-  lines.push(`| 传承期/独角兽（⑥ 或 unicorn） | ${all.filter(r => r.maxStage >= 6 || r.endingKey === 'unicorn').length} | ${pct(all.filter(r => r.maxStage >= 6 || r.endingKey === 'unicorn').length, total)} | ≈1% |`);
+  lines.push(`| 平凡线（最高停留在 (2)(3)阶段） | ${mundane} | ${pct(mundane, total)} | ≈55%±8 |`);
+  lines.push(`| 成长期（最高到 (4)，月 3 万+） | ${stageReach(4)} | ${pct(stageReach(4), total)} | ≈20% |`);
+  lines.push(`| 自由期（最高到 (5)，被动覆盖） | ${stageReach(5)} | ${pct(stageReach(5), total)} | ≈4%±2 |`);
+  lines.push(`| 传承期/独角兽（(6) 或 unicorn） | ${all.filter(r => r.maxStage >= 6 || r.endingKey === 'unicorn').length} | ${pct(all.filter(r => r.maxStage >= 6 || r.endingKey === 'unicorn').length, total)} | ≈1% |`);
   lines.push('');
   lines.push('> 注：bot 是策略机器人不是真人，目标表用来抓**量级失衡**（某结局 0% 或 50%），小口径偏差属正常。');
   lines.push('');

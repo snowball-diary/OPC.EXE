@@ -814,7 +814,7 @@ export const EVENT_DEFS: EventDef[] = [
 
   // ============================================================
   // 三、Token 价格周期：4 条（priceIndex 落点 = tokenBill.priceIndex，增量键 tokenPriceIndex）
-  //     月账单 = Σ(base+perUnit×用量)×priceIndex；价格指数不归玩家管，只归市场管
+  //     月账单 = sum(base+perUnit×用量)×priceIndex；价格指数不归玩家管，只归市场管
   // ============================================================
 
   {

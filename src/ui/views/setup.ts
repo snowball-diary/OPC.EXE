@@ -45,7 +45,7 @@ export function emptyDraft(): SetupDraft {
   };
 }
 
-/** 预算余量 = 3 + Σ(所选特质 cost)（负消耗/正返还，openings.def 口径） */
+/** 预算余量 = 3 + sum(所选特质 cost)（负消耗/正返还，openings.def 口径） */
 export function talentBudgetLeft(talents: readonly string[]): number {
   return TALENT_BUDGET + talents.reduce((a, id) => a + (findTalent(id)?.cost ?? 0), 0);
 }

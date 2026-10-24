@@ -193,7 +193,7 @@ function register(el: HTMLElement, ctx: UiCtx): void {
   el.innerHTML = `
     <div class="proj-view">
       <div class="proj-toolbar">
-        <span class="dim-line">注意力槽 ${alive.length}/${s.attentionCap} · 在营项目月维护 = Σ类型基线</span>
+        <span class="dim-line">注意力槽 ${alive.length}/${s.attentionCap} · 在营项目月维护 = sum类型基线</span>
         <button class="px-btn gold" id="btn-new-project">＋ 新建项目</button>
       </div>
       <div class="np-wrap" style="display:none">${newProjectFormHtml()}</div>
