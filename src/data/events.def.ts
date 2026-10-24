@@ -163,7 +163,7 @@ export const EVENT_DEFS: EventDef[] = [
         s1Variant: '先补标识再说',
         effects: [
           { k: 'compliance', op: '+', v: 4 },
-          { k: 'followers.bilili', op: '+', v: -40 },
+          { k: 'followers.main', op: '+', v: -40 }, // 主平台别名：违规惩罚不写死平台（可能根本没开 B 站号）
           { k: 'stress', op: '+', v: 2 }
         ],
         results: '你把近 30 条内容补上了标识。曝光掉了一截，但站内信没有再来。慢就是快。'
@@ -186,7 +186,7 @@ export const EVENT_DEFS: EventDef[] = [
         requires: 'system2',
         s1Variant: '应该没事吧',
         effects: [
-          { k: 'followers.bilili', op: '+', v: -120 },
+          { k: 'followers.main', op: '+', v: -120 },
           { k: 'stress', op: '+', v: 8 }
         ],
         results: '你划走了站内信。限流像滴水，一滴不疼，天天滴。'
@@ -477,7 +477,7 @@ export const EVENT_DEFS: EventDef[] = [
         effects: [
           { k: 'ap', op: '+', v: -1 },
           { k: 'stress', op: '+', v: 3 },
-          { k: 'followers.douyin', op: '+', v: -30 }
+          { k: 'followers.main', op: '+', v: -30 }
         ],
         results: '你花了一上午把它的行为日志翻了个底朝天，删掉了三条会再犯的规则。限流 7 天，认了。'
       },
@@ -495,9 +495,9 @@ export const EVENT_DEFS: EventDef[] = [
       {
         id: 'scale-up',
         label: '提量对冲：烧更多预算压过限流',
-        hint: '抖音粉 -150，压力 +8——风控喜欢头铁的人',
+        hint: '主平台粉 -150，压力 +8——风控喜欢头铁的人',
         effects: [
-          { k: 'followers.douyin', op: '+', v: -150 },
+          { k: 'followers.main', op: '+', v: -150 },
           { k: 'cash', op: '+', v: [-2000, -4000] },
           { k: 'stress', op: '+', v: 8 }
         ],
@@ -518,10 +518,10 @@ export const EVENT_DEFS: EventDef[] = [
       {
         id: 'full-audit',
         label: '人工接管：全线下架重审',
-        hint: 'AP -1，小红书粉 -80，合规 +3',
+        hint: 'AP -1，主平台粉 -80，合规 +3',
         effects: [
           { k: 'ap', op: '+', v: -1 },
-          { k: 'followers.xhs', op: '+', v: -80 },
+          { k: 'followers.main', op: '+', v: -80 },
           { k: 'compliance', op: '+', v: 3 }
         ],
         results: '你把素材库清空重建，每个词都对着新的违禁清单过了一遍。慢了一天，但审核队列里再也没有你。'
@@ -562,10 +562,10 @@ export const EVENT_DEFS: EventDef[] = [
       {
         id: 'declare-all',
         label: '补声明：把它的产出全部标识',
-        hint: '合规 +4，B站粉 -60，一劳永逸',
+        hint: '合规 +4，主平台粉 -60，一劳永逸',
         effects: [
           { k: 'compliance', op: '+', v: 4 },
-          { k: 'followers.bilili', op: '+', v: -60 },
+          { k: 'followers.main', op: '+', v: -60 },
           { k: 'stress', op: '+', v: 2 }
         ],
         results: '你顺手改了智能体的发布配置：以后每条自动带标识。曝光掉了 15%，账号从「待核实」变回「正常」。'
@@ -584,9 +584,9 @@ export const EVENT_DEFS: EventDef[] = [
       {
         id: 'tough',
         label: '硬刚：标注「人类创作」不改',
-        hint: 'B站粉 -200，压力 +10——谎会被截图存档',
+        hint: '主平台粉 -200，压力 +10——谎会被截图存档',
         effects: [
-          { k: 'followers.bilili', op: '+', v: -200 },
+          { k: 'followers.main', op: '+', v: -200 },
           { k: 'stress', op: '+', v: 10 }
         ],
         results: '三天后，有人把你上周的视频和你智能体的生成日志放在了同一个帖子里。帖子比你的内容先热。'
@@ -617,19 +617,19 @@ export const EVENT_DEFS: EventDef[] = [
       {
         id: 'switch-track',
         label: '换赛道：把选题池整个换掉',
-        hint: '认知 +4，B站粉 -40——旧粉会流失一部分',
+        hint: '认知 +4，主平台粉 -40——旧粉会流失一部分',
         effects: [
           { k: 'cognition', op: '+', v: 4 },
-          { k: 'followers.bilili', op: '+', v: -40 }
+          { k: 'followers.main', op: '+', v: -40 }
         ],
         results: '你把智能体的选题池从「热点解读」换到「亲手案例」。掉了几百个泛粉，留下的都更值钱。'
       },
       {
         id: 'more-volume',
         label: '提高频次：用量把同质压过去',
-        hint: 'B站粉 -80，压力 +6——量解决不了「像」',
+        hint: '主平台粉 -80，压力 +6——量解决不了「像」',
         effects: [
-          { k: 'followers.bilili', op: '+', v: -80 },
+          { k: 'followers.main', op: '+', v: -80 },
           { k: 'stress', op: '+', v: 6 }
         ],
         results: '日更变日更×2。数据涨了一点，评论区开始有人给三条不同的内容回复同一句「又是你」。'
@@ -1227,7 +1227,7 @@ export const EVENT_DEFS: EventDef[] = [
         label: '补声明：把 AI 标识都补上',
         hint: '合规加分，流量短期受损',
         s1Variant: '先补标识再说',
-        effects: [{ k: 'compliance', op: '+', v: 4 }, { k: 'followers.bilili', op: '+', v: -30 }],
+        effects: [{ k: 'compliance', op: '+', v: 4 }, { k: 'followers.main', op: '+', v: -30 }],
         results: '你把所有内容补上了 AI 标识。流量掉了一截，但账号安全了。慢就是快。'
       },
       {
@@ -2551,6 +2551,7 @@ export const EVENT_DEFS: EventDef[] = [
         s1Variant: '这种行情，不上车就是亏',
         effects: [
           { k: 'debt', op: '+', v: [10000, 20000] },
+          { k: 'cash', op: '+', v: [10000, 20000] }, // 杠杆拿到的钱真实入账：此前只有负债没有现金，借来的弹药凭空蒸发
           { k: 'stress', op: '+', v: 8 }
         ],
         results: '你把借钱按钮按了下去。行情又涨了三天，你开始习惯每天开盘前的心跳——那是多巴胺，也是利息。'
@@ -3567,7 +3568,10 @@ export const EVENT_DEFS: EventDef[] = [
   }
 ];
 
+// O(1) 索引：findEventDef 在 publishContent/tickChains/resolveChoice 等热路径上被反复调用
+const EVENT_BY_ID: Map<string, EventDef> = new Map(EVENT_DEFS.map(d => [d.id, d]));
+
 export function findEventDef(id: string): EventDef | undefined {
-  return EVENT_DEFS.find(e => e.id === id);
+  return EVENT_BY_ID.get(id);
 }
 

@@ -100,9 +100,9 @@ export function projectStageBadge(stage: string): { label: string; cls: string }
   return table[stage] ?? { label: stage, cls: '' };
 }
 
-/** HTML 转义（与 main.ts renderLog 同规则） */
+/** HTML 转义（含属性位：引号一并转，任何用户/存档可控字符串进 title="…" 也不逃逸） */
 export function escapeHtml(t: string): string {
-  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 /** LogEntry 类型再导出（避免视图层重复 import 路径写错） */

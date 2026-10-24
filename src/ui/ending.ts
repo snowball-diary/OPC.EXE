@@ -150,7 +150,7 @@ function endOverlayInnerHtml(key: string): string {
     </div>`;
 }
 
-function bindOverlayButtons(overlay: HTMLElement): void {
+function bindOverlayButtons(overlay: HTMLElement, key: string): void {
   overlay.querySelector<HTMLButtonElement>('#btn-restart')?.addEventListener('click', () => {
     SFX.click();
     window.location.reload(); // 回标题屏（全量重开机，最干净）
@@ -170,14 +170,10 @@ function bindOverlayButtons(overlay: HTMLElement): void {
     const g = getGame();
     if (!g) return;
     SFX.good();
-    // 主动结局回头（任务指定）：解除 over，清理结局触发 flag（否则下一天被动轮询会立刻再终局），
-    // 过劳计数复位，存档，撤覆盖层，原局回场。修「继续经营后被结局 immediately 拖回」缝
-    g.state.meta.over = false;
-    g.state.meta.endingKey = undefined;
-    for (const f of ['retireChosen', 'sellChosen', 'handoverChosen', 'pivotRestartChosen', 'backToWorkChosen']) {
-      delete g.state.flags[f];
-    }
-    (g.state as StateSlice).burnoutCount = 0; // 过劳计数复位（burnoutDown 被动轮询不会再立刻拖回终局）
+    // 主动结局回头（任务指定）：over/endingKey/五个触发 flag/过劳计数的清场统一走 core 收口
+    // （resumeFromEnding 内调 chooseEnding+clampAll+seedState 回写）——UI 不再直改引擎状态，
+    // 修「继续经营后被结局 immediately 拖回」缝的责任面收进 core。
+    if (!g.resumeFromEnding(key)) return;
     saveToSlot('auto', g.state);
     overlay.remove();
     const canvas = document.getElementById('scene');
@@ -218,11 +214,11 @@ export function renderEndingScreen(key: string): void {
       if (!overlay.isConnected) return;
       overlay.className = '';
       overlay.innerHTML = endOverlayInnerHtml(key);
-      bindOverlayButtons(overlay);
+      bindOverlayButtons(overlay, key);
     }, 2000);
     return;
   }
   overlay.innerHTML = endOverlayInnerHtml(key);
   document.body.appendChild(overlay);
-  bindOverlayButtons(overlay);
+  bindOverlayButtons(overlay, key);
 }

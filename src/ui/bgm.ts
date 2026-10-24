@@ -42,7 +42,8 @@ function fetchBuffer(track: BgmTrack): Promise<AudioBuffer | null> {
     try {
       const c = ctx;
       if (!c) return null;
-      const res = await fetch(SRC[track]);
+      // 相对路径统一锚到 document.baseURI：部署在无尾斜杠子路径入口（如 /app）时 fetch 才不落到站点根
+      const res = await fetch(new URL(SRC[track], document.baseURI).href);
       if (!res.ok) return null;
       const buf = await c.decodeAudioData(await res.arrayBuffer());
       buffers.set(track, buf);
@@ -74,6 +75,7 @@ function startTrack(track: BgmTrack): void {
   const c = ctx;
   if (!c || muted || want !== track) return;
   if (layer?.track === track) return;
+  const replacing = layer != null; // 先记切曲意图：回调时 layer 已被置 null，直接读恒为 false
   if (layer) {
     fadeOutAndStop(layer, FADE);
     layer = null;
@@ -88,7 +90,7 @@ function startTrack(track: BgmTrack): void {
       src.loop = true;
       const t = c.currentTime;
       gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.linearRampToValueAtTime(GAIN, t + (layer ? FADE : SOFT_IN));
+      gain.gain.linearRampToValueAtTime(GAIN, t + (replacing ? FADE : SOFT_IN));
       src.connect(gain).connect(c.destination);
       src.start();
       layer = { track, src, gain };

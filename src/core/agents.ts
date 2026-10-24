@@ -122,6 +122,7 @@ export function hireAgent(s: StateSlice, id: AgentId, rng: Rng): ActionResult {
   }
   if (s.cash < def.deployCost) return { ok: false, msg: `部署费不足（需 ¥${def.deployCost}）` };
   s.cash -= def.deployCost;
+  s.dailyFlow.otherOut += def.deployCost; // 今日净流分项与现金扣减同口径（部署费走「其他流出」）
   s.agents.push({ id, hiredDay: s.meta.day, usageScale: 1, trust: 60, weekStats: { followers: 0, revenue: 0, apSaved: 0, tickets: 0, content: 0, leads: 0 } });
   s.stats.agentsHired += 1;
   grantKp(s, 'agent'); // 首次雇佣送智能体经济词条
@@ -197,7 +198,7 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
         s.stats.contentPublished += 1;
         ws.content += 1;
         ws.followers += scaled;
-        if (r.income > 0) ws.revenue += r.income;
+        if (r.income > 0) ws.revenue += r.income - Math.round(r.income * 0.6); // 面板记 40% 净贡献
         pushLog(s, `【${def.name}】自动产出第 ${ws.content} 篇内容（等效 40%）：粉丝 +${scaled}${r.income > 0 ? ` · 变现 +¥${Math.round(r.income * 0.4)}` : ''}`, 'purple');
         if (r.income > 0) {
           // 自动内容变现按 40% 等效折算（引擎侧 publishContent 已全额入账，回冲 60%）
@@ -205,6 +206,7 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
           s.cash -= giveBackCash;
           s.stats.totalRevenue -= giveBackCash;
           s.flags.monthRevenueAcc = num(s.flags.monthRevenueAcc) - giveBackCash;
+          s.dailyFlow.passiveIn -= giveBackCash; // 日流水同步回冲，防「今日净流」分项虚增
         }
         break;
       }
@@ -264,12 +266,12 @@ export function tickAgentsDay(s: StateSlice, rng: Rng): void {
 
   // --- ①b Token 日结：当日用量×priceIndex 扣现（月底只汇总对账，不再大额扣款） ---
   const dayBill = dailyTokenBill(s);
+  s.tokenBill.yesterday = dayBill; // 日账单为 0 也刷新（停用全部智能体后「昨日」仍显示旧非零账单会误导排查）
   if (dayBill > 0) {
     s.cash -= dayBill;
     s.stats.tokenSpent += Math.round(dayBill);
     s.stats.totalExpense += Math.round(dayBill);
     s.dailyFlow.tokenOut += dayBill;
-    s.tokenBill.yesterday = dayBill;
     s.tokenBill.monthToDate += dayBill;
   }
 

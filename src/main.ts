@@ -13,6 +13,7 @@ import { ACTION_DEFS } from './data/actions.def';
 import { findEventDef } from './data/events.def';
 import { findEnding } from './data/endings.def';
 import { canContinueFromSlot, loadSlot, saveToSlot } from './save/save';
+import { escapeHtml } from './ui/fmt';
 import { BGM } from './ui/bgm';
 import { renderEndingScreen } from './ui/ending';
 import { bindFloatLayer, capFloats, FLOAT_MAX, floatText } from './ui/float';
@@ -87,10 +88,6 @@ function renderLog(): void {
   el.innerHTML = tail
     .map(e => `<p class="${e.cls}">&gt; 第${e.day}天 ${escapeHtml(e.msg)}</p>`)
     .join('');
-}
-
-function escapeHtml(t: string): string {
-  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ---------- dispatch 包装 ----------

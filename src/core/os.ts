@@ -27,7 +27,10 @@ export function installPatch(s: StateSlice, id: string): ActionResult {
   if (cash > 0 && s.cash < cash) return { ok: false, msg: '现金不足' };
   s.ap -= def.installCost.ap;
   s.energy = Math.max(0, s.energy - def.installCost.energy);
-  if (cash > 0) s.cash -= cash;
+  if (cash > 0) {
+    s.cash -= cash;
+    s.dailyFlow.otherOut += cash; // 今日净流分项与现金扣减同口径（补丁现金成本走「其他流出」）
+  }
   const st: OSRuleState = { id: def.id, layer: def.layer, installedDay: s.meta.day, internalized: false, streak: 0 };
   s.osRules.push(st);
   s.stats.patchesInstalled += 1;

@@ -25,7 +25,7 @@ export const ENDING_DEFS: EndingDef[] = [
   { key: 'suddenDeath', name: '猝死', type: 'passive', desc: '隐性疲劳≥85+睡眠<15+心悸仍硬撑+过劳≥1 后掷骰命中', check: s => s.meta.endingKey === 'suddenDeath', text: '黑屏。\n老张说过：「我早说过，命是唯一不可再生的生产资料。其他都可以再来，这个不行。」\n2026 年 4 月的事，你没忘吧。', color: 'bad' },
   { key: 'legalFrozen', name: '法律冻结', type: 'passive', desc: 'flags.legalFrozen（灰产史+合规<40 的稽查连锁触发）', check: s => s.flags.legalFrozen === true, text: '账户被冻结那天早上，你还在给客户回消息。灰色的钱来得快，去得更快——连本带利。', color: 'bad' },
   { key: 'mentalBreak', name: '倦怠退场', type: 'passive', desc: '连续 7 天 System1 深度（s1DeepDays≥7）', check: s => num(s.flags.s1DeepDays) >= 7, text: '连续一周，你做的每个决定都是情绪替你做的。你看着屏幕，突然不知道自己在干嘛——身体先于大脑举手投降。', color: 'bad' },
-  { key: 'platformCollapse', name: '平台覆灭', type: 'passive', desc: '全部平台 banned 且无私域', check: s => { const accs = Object.values(s.platforms); return accs.length > 0 && accs.every(a => a.state === 'banned') && s.flags.privateDomain !== true; }, text: '最后一个账号被封的那天，你才明白：你从来不是在经营粉丝，你是在替平台打工。流量退潮，你连泳裤都没有。', color: 'bad' },
+  { key: 'platformCollapse', name: '平台覆灭', type: 'passive', desc: '全部平台 banned 且无私域', check: s => { const accs = Object.values(s.platforms); return accs.length > 0 && accs.every(a => a.state === 'banned') && !s.flags.privateDomain; }, text: '最后一个账号被封的那天，你才明白：你从来不是在经营粉丝，你是在替平台打工。流量退潮，你连泳裤都没有。', color: 'bad' },
   { key: 'healthCollapse', name: '健康崩盘', type: 'passive', desc: '健康合成<10（强制长期休养）', check: s => composeHealth(s.health) < 10, text: '体检单像一份判决书。医生说「再熬就真的起不来了」，你第一次发现，原来「休息」也需要下决心。', color: 'bad' },
 
   // ---------- 隐藏（5） ----------

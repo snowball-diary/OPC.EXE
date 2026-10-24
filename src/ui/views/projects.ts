@@ -6,7 +6,7 @@ import { registerView } from '../registry';
 import { unitEconomics } from '../../core/agents';
 import type { Project, ProjectStage, ProjectType, RevenueModelId, StateSlice } from '../../core/types';
 import { PROJECT_TYPES, findProjectType } from '../../data/projects.def';
-import { pct, projectStageBadge, yuan } from '../fmt';
+import { pct, projectStageBadge, yuan, escapeHtml } from '../fmt';
 import { iconHtml } from '../icons';
 
 // ---------- 纯函数（tests/views.test.ts / s10 覆盖） ----------
@@ -107,7 +107,7 @@ function projectCard(p: Project, s: StateSlice): string {
   return `
     <div class="proj-card ${p.gray ? 'gray' : ''}${p.alive ? '' : ' dead'}">
       <div class="proj-head">
-        <b>${p.gray ? '<span class="tag-gray">灰</span>' : ''}${p.name}</b>
+        <b>${p.gray ? '<span class="tag-gray">灰</span>' : ''}${escapeHtml(p.name)}</b>
         <span class="badge ${st.cls}">${st.label}</span>
         <span class="dim-line">${t?.name ?? p.type} · ${revenueModelLabel(p.revenueModel)} · v${p.version}</span>
       </div>
@@ -122,7 +122,7 @@ function projectCard(p: Project, s: StateSlice): string {
       </div>
       <div class="proj-stats">
         <span>今日流水 <b class="${todayFlow > 0 ? 'c-green' : 'c-dim'}">${todayFlow > 0 ? `+${yuan(Math.round(todayFlow))}` : '¥0'}</b></span>
-        <span>日增用户 <b>${todayUsers > 0 ? `+${Math.max(1, Math.round(todayUsers))}` : '—'}</b></span>
+        <span>日增用户 <b>${todayUsers >= 0.5 ? `+${Math.round(todayUsers)}` : todayUsers > 0 ? '+<1' : '—'}</b></span>
         <span>月收 <b class="c-gold">${yuan(Math.round(p.mrr))}</b></span>
         <span>用户 <b>${Math.round(p.users)}</b></span>
         <span>风险 <b class="c-orange">${pct(p.risk)}</b></span>

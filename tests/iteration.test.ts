@@ -13,7 +13,6 @@ import { agentBizMult, hireAgent, tickAgentsDay, weekStatsOf } from '../src/core
 import { resolveChoice } from '../src/core/events';
 import { findEventDef, EVENT_DEFS, NEWS_TICKER } from '../src/data/events.def';
 import { findAction } from '../src/data/actions.def';
-import { ZHANG_LINES } from '../src/data/zhang.def';
 import { KP_DEFS } from '../src/data/kp.def';
 import { healthHints } from '../src/ui/views/status';
 import { pmfInterval, stageTimeline, grayRiskScore, todayUnitEconomics } from '../src/ui/views/projects';
@@ -506,12 +505,6 @@ describe('作者彩蛋与溯源', () => {
     expect(isOfficialSave({ ...sv, author: undefined })).toBe(false);
     expect(isOfficialSave(null)).toBe(false);
     void AUTHOR_TAG; void PRODUCT_TAG;
-  });
-
-  it('老张台词池 ≥3 条提到赖嘉诚（克制典故，毒舌风格不变）', () => {
-    const named = ZHANG_LINES.filter(l => l.text.includes('赖嘉诚'));
-    expect(named.length).toBeGreaterThanOrEqual(3);
-    for (const l of named) expect(l.text.length).toBeLessThanOrEqual(60);
   });
 
   it('彩蛋事件 egg-laijiacheng-site：机会类低权重 once，独立站流量小幅+', () => {

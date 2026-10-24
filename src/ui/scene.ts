@@ -68,8 +68,7 @@ export function dayPhaseOf(ap: number, apMax: number): 0 | 1 | 2 | 3 {
 // ---------- 画布运行时 ----------
 
 interface SceneRT {
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
+  ctx: CanvasRenderingContext2D; // canvas 引用不存（全文件无人读，要画布时经 ctx.canvas 可得）
   raf: number;
   t: number;        // 动画时钟（可暂停/定格）
   last: number;     // 上一帧时间戳
@@ -316,7 +315,8 @@ function loop(now: number): void {
   const paused = modalOpen() || document.hidden || (over && !sudden); // 定格结局时钟停走
   if (!paused) rt.t += now - rt.last;
   rt.last = now;
-  if (!document.hidden) drawFrame(rt);
+  // 暂停态画面静止，跳过每帧全量重绘（192×108 场景逐像素绘制，白耗电）；隐藏态同样跳过
+  if (!document.hidden && !paused) drawFrame(rt);
   rt.raf = requestAnimationFrame(loop);
 }
 
@@ -325,7 +325,7 @@ export function startScene(canvas: HTMLCanvasElement): void {
   stopScene();
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  rt = { canvas, ctx, raf: 0, t: 0, last: performance.now(), activity: 'idle', fade: 0, frozen: false };
+  rt = { ctx, raf: 0, t: 0, last: performance.now(), activity: 'idle', fade: 0, frozen: false };
   rt.raf = requestAnimationFrame(loop);
 }
 

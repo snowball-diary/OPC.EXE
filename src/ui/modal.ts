@@ -5,9 +5,9 @@
 // 队列排序抽成纯函数 sortModalQueue / MODAL_PRIORITY 供单测。
 
 import type { EventDef, StateSlice } from '../core/index';
-import { filterChoicesForUI, resolveChoice } from '../core/index';
+import { filterChoicesForUI } from '../core/index';
 import { KP } from '../data/kp.def';
-import { getGame, getRng } from './runtime';
+import { getGame } from './runtime';
 import { SFX } from './sfx';
 import { floatText } from './float';
 import { iconHtml, renderIcons } from './icons';
@@ -199,7 +199,7 @@ function renderEventModal(ev: EventDef, s: StateSlice): void {
       const g = getGame();
       if (!g) return;
       SFX.click();
-      const r = resolveChoice(g.state, ev, realIdx >= 0 ? realIdx : i, getRng());
+      const r = g.resolveEventChoice(ev, realIdx >= 0 ? realIdx : i); // 引擎 rng + seedState 回写，读档后命运流不分叉
       closeCurrent();
       // 结果文案弹层 → 飘字 → renderAll（终局直接交棒）
       if (r.ending) {

@@ -5,7 +5,7 @@ import type { OSRuleDef } from '../core/types';
 export const PATCH_DEFS: OSRuleDef[] = [
   // ---------- 原则层 ----------
   { id: 'noList', name: '不做清单', layer: 'principle', desc: '写下今年不做的三件事。锁死部分坏选项（道德事件优化，flag:noListActive）。', installCost: { ap: 1, energy: 6 }, upkeep: 0, effectFlags: ['act_any'] },
-  { id: 'serviceFirst', name: '先服务后产品', layer: 'principle', desc: '先有客户问题，再做产品。交付类行动+10%。', installCost: { ap: 1, energy: 8 }, upkeep: 0, effectFlags: ['act_deliver'] },
+  { id: 'serviceFirst', name: '先服务后产品', layer: 'principle', desc: '先有客户问题，再做产品。服务交付类（现金流域）行动+10%。', installCost: { ap: 1, energy: 8 }, upkeep: 0, effectFlags: ['act_deliver'] },
   { id: 'sincere', name: '真诚为本', layer: 'principle', desc: '不吹不黑。信任账户类事件自动加分（flag:sincereActive）。', installCost: { ap: 1, energy: 4 }, upkeep: 0, effectFlags: ['act_any'] },
   { id: 'infoDiet', name: '信息节食', layer: 'principle', desc: '只读对决策有用的。技能类行动+10%。', installCost: { ap: 1, energy: 4 }, upkeep: 20, effectFlags: ['act_any'] },
   { id: 'bigRock', name: '抓大放小', layer: 'principle', desc: '每天先做最重要的那件。周焦点加成期间压力增速降低。', installCost: { ap: 1, energy: 6 }, upkeep: 0, effectFlags: ['act_any'] },

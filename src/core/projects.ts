@@ -238,14 +238,15 @@ export function retireProject(s: StateSlice, projectId: string): ActionResult {
   const p = s.projects.find(x => x.id === projectId && x.alive);
   if (!p) return { ok: false, msg: '项目不存在或已退役' };
   const residual = Math.round(p.users * 2 + p.quality * 10);
+  const hadRevenue = p.users > 0 || p.mrr > 0; // 先判再清：置零后 mrr>0 恒假
   p.alive = false;
   p.mrr = 0;
   p.users = Math.round(p.users);
   s.cash += residual;
   s.assets.push({ id: `a${p.id}`, name: `${p.name}（退役资产）`, kind: 'work', value: residual, day: s.meta.day });
-  if (p.users > 0 || p.mrr > 0) s.stats.projectsDone += 1;
+  if (hadRevenue) s.stats.projectsDone += 1;
   else s.stats.projectsFailed += 1;
-  pushLog(s, `「${p.name}」体面退役：回收残值 ¥${residual}。${p.users > 0 ? '它服务过真实的人。' : '它没能等到自己的用户。'}`, p.users > 0 ? 'gold' : 'sys');
+  pushLog(s, `「${p.name}」体面退役：回收残值 ¥${residual}。${hadRevenue ? '它服务过真实的人。' : '它没能等到自己的用户。'}`, hadRevenue ? 'gold' : 'sys');
   return { ok: true, msg: `退役回收 ¥${residual}`, floatTexts: [{ text: `+¥${residual}`, cls: 'gold' }] };
 }
 

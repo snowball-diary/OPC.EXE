@@ -5,7 +5,6 @@ import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
 import { apMaxFor, composeHealth, recoveryState, suddenDeathRisk } from '../../core/health';
 import type { RecoveryPhase, SkillDim, StateSlice } from '../../core/types';
-import { checkPassiveEndings, applyEnding } from '../../core/endings';
 import { findEnding } from '../../data/endings.def';
 import { BOTTLENECK_LABELS } from '../../core/time';
 import { stageVersion } from '../topbar';
@@ -254,12 +253,12 @@ function bindActiveEndings(el: HTMLElement, ctx: UiCtx): void {
       const flag = b.dataset.flag ?? '';
       const g = getGame();
       if (!g) return;
-      // endings.ts 触发约定：置约定 flag → 被动轮询谓词命中 → applyEnding 记账（over/endingKey/图鉴）
-      g.state.flags[flag] = true;
-      const def = checkPassiveEndings(g.state) ?? findEnding(key);
-      if (def) applyEnding(g.state, def);
+      // 触发收口（core 唯一写者）：置 endings.def 约定 flag → checkPassiveEndings 烈度优先级命中
+      // （口径保留）→ applyEnding 记账 + clampAll/seedState 回写，全部在 core 内完成
+      const applied = g.triggerEnding(flag, key);
+      if (!applied) return;
       saveToSlot('auto', g.state);
-      renderEndingScreen(key);
+      renderEndingScreen(applied); // 渲染实际落地的结局（烈度优先可能命中更高位的被动结局）
       void ctx;
     });
   });
@@ -272,7 +271,7 @@ function saveHtml(el: HTMLElement): void {
 
 function register(el: HTMLElement, ctx: UiCtx): void {
   const s = ctx.state;
-  const auto = slotSummary(loadSlot('auto'));
+  const auto = slotSummary(loadSlot('auto'), 'auto'); // 传槽位走摘要缓存（避免每次渲染重复全档 parse）
   el.innerHTML = `
     <div class="status-view">
       <div class="status-col">

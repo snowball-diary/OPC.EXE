@@ -12,8 +12,21 @@ import { enqueueNotice, processQueue } from '../modal';
 
 // ---------- 纯函数（tests/views.test.ts 覆盖） ----------
 
-/** 槽位摘要（纯函数）：第 N 天 · 现金 · 结局态 · 保存时间 */
-export function slotSummary(sv: SaveGame | null): string {
+export type SlotSummary = string;
+
+/**
+ * 摘要缓存：每次渲染会对同一批槽位重复 JSON.parse 全档（saves 渲染 4 槽 × status 页再补 1 次自动档），
+ * 档案未变时解析是纯浪费。按槽位缓存「原串指纹 → 摘要」；指纹含 createdAt（摘要里有保存时间，
+ * 同内容再存也会产生新指纹），因此 main.ts 自动存档 / ending.ts 回头等其余写入点无需各自失效也绝不陈旧。
+ */
+const summaryCache = new Map<SlotId, { raw: string; summary: SlotSummary }>();
+
+/** 写槽后失效对应槽的缓存（saveToSlot 调用点的配套收口；兜底上面指纹机制） */
+export function invalidateSummary(slot: SlotId): void {
+  summaryCache.delete(slot);
+}
+
+function computeSlotSummary(sv: SaveGame | null): SlotSummary {
   if (!sv) return '空槽位';
   try {
     const s = JSON.parse(sv.game) as StateSlice;
@@ -28,6 +41,16 @@ export function slotSummary(sv: SaveGame | null): string {
   } catch {
     return '存档损坏（校验未过）';
   }
+}
+
+/** 槽位摘要（纯函数+按原串缓存）：第 N 天 · 现金 · 结局态 · 保存时间；slot 给定时走缓存 */
+export function slotSummary(sv: SaveGame | null, slot?: SlotId): SlotSummary {
+  const raw = sv ? `${sv.game}|${sv.createdAt}` : '';
+  const hit = slot !== undefined ? summaryCache.get(slot) : undefined;
+  if (hit && hit.raw === raw) return hit.summary;
+  const summary = computeSlotSummary(sv);
+  if (slot !== undefined) summaryCache.set(slot, { raw, summary });
+  return summary;
 }
 
 /** 读取动作的可用性（纯函数）：空槽不可读；终局档可读（用于查看报告） */
@@ -69,7 +92,7 @@ export function renderSaveSection(el: HTMLElement): void {
     const sv = loadSlot(slot);
     return `
       <div class="save-slot">
-        <div class="slot-head"><b>槽位 ${slot}</b><span class="slot-sum">${slotSummary(sv)}</span></div>
+        <div class="slot-head"><b>槽位 ${slot}</b><span class="slot-sum">${slotSummary(sv, slot)}</span></div>
         <div class="slot-btns">
           <button class="px-btn" data-save="${slot}">保存${sv ? '（覆盖）' : ''}</button>
           <button class="px-btn" data-load="${slot}" ${sv ? '' : 'disabled title="空槽位"'}>读取</button>
@@ -78,7 +101,7 @@ export function renderSaveSection(el: HTMLElement): void {
   }).join('');
   el.innerHTML = `
     <div class="panel-title">// 存档与系统</div>
-    <p class="s7-hint">自动档：${slotSummary(auto)}（每次「结束今天」与每 3 次操作静默写入）</p>
+    <p class="s7-hint">自动档：${slotSummary(auto, 'auto')}（每次「结束今天」与每 3 次操作静默写入）</p>
     <div class="save-grid">${rows}</div>
     <div class="save-io">
       <button class="px-btn" id="btn-export-json">导出当前存档 JSON</button>
@@ -92,6 +115,7 @@ export function renderSaveSection(el: HTMLElement): void {
       armOnce(b, '再次点击确认覆盖', () => {
         const slot = (b.dataset.save ?? '1') as SlotId;
         const ok = saveToSlot(slot, game.state);
+        invalidateSummary(slot); // 写入点失效对应槽（指纹机制之外的显式收口）
         SFX.coin();
         enqueueNotice('存档', ok ? `已写入槽位 ${slot}。` : '浏览器存储不可用（隐私模式/已满）：已降级内存，请尽快导出 JSON。', ok ? 'good' : 'bad');
         processQueue();

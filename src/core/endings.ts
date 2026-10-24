@@ -1,5 +1,5 @@
 // 结局判定 + 五维人生报告
-import { ENDING_DEFS, netWorth } from '../data/endings.def';
+import { ENDING_DEFS, findEnding, netWorth } from '../data/endings.def';
 import { composeHealth } from './health';
 import { pushLog } from './state';
 import type { EndingDef, LifeReport, StateSlice } from './types';
@@ -25,6 +25,36 @@ export function applyEnding(s: StateSlice, def: EndingDef): void {
   s.meta.endingKey = def.key;
   if (!s.stats.endingsSeen.includes(def.key)) s.stats.endingsSeen.push(def.key);
   pushLog(s, `【终局】${def.name}：${typeof def.text === 'function' ? def.text(s) : def.text}`, def.color);
+}
+
+/** 五个主动结局的触发 flag（endings.def 约定；「继续经营」回头时统一清场，防被动轮询立刻再终局） */
+const ACTIVE_ENDING_FLAGS = ['retireChosen', 'sellChosen', 'handoverChosen', 'pivotRestartChosen', 'backToWorkChosen'] as const;
+
+/**
+ * 主动结局回头收口（core 唯一写者；「继续经营」原局回场入口，仅用于主动结局）：
+ * 校验结局 key 存在 → 清 over/endingKey/五个主动结局触发 flag/burnoutCount
+ * （不清则下一天被动轮询会立刻把玩家拖回终局）。返回 false = key 不存在，调用方忽略即可。
+ */
+export function chooseEnding(s: StateSlice, key: string): boolean {
+  if (!findEnding(key)) return false;
+  s.meta.over = false;
+  s.meta.endingKey = undefined;
+  for (const f of ACTIVE_ENDING_FLAGS) delete s.flags[f];
+  s.burnoutCount = 0;
+  return true;
+}
+
+/**
+ * 主动结局触发收口：置 endings.def 约定 flag → checkPassiveEndings 按烈度优先级命中
+ * （口径与 time.ts 步 11 一致：触发 flag 之外若有更高烈度被动结局同时命中，以先者为准；
+ * 无命中回退按 key 直取）→ applyEnding 记账。返回实际落地的结局 key（null = 未命中）。
+ */
+export function triggerActiveEnding(s: StateSlice, flag: string, key: string): string | null {
+  s.flags[flag] = true;
+  const def = checkPassiveEndings(s) ?? findEnding(key);
+  if (!def) return null;
+  applyEnding(s, def);
+  return def.key;
 }
 
 const clamp100 = (n: number): number => Math.max(0, Math.min(100, n));

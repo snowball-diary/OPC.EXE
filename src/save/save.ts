@@ -121,11 +121,15 @@ export function saveToSlot(slot: SlotId, s: StateSlice): boolean {
 }
 
 export function loadSlot(slot: SlotId): SaveGame | null {
+  // 降级态（localStorage 写失败过）优先读内存：内存里才是最新档，
+  // 否则 localStorage 里的旧档会盖掉降级期间的进度（静默回档）
+  if (degraded) return memory.get(slot) ?? null;
   const raw = storageGet(KEY_PREFIX + slot);
   if (raw !== null) {
     try {
       const sv = JSON.parse(raw) as SaveGame;
-      return validate(sv) ? migrate(sv) : null;
+      const migrated = migrate(sv); // 先迁移（抬 schemaVersion）再校验，与 importJson 同序
+      return validate(migrated) ? migrated : null;
     } catch {
       return null;
     }
@@ -155,7 +159,13 @@ export function exportJson(s: StateSlice): string {
 
 /** 非法存档抛 Error('INVALID_SAVE')，由调用方处理 UI 提示 */
 export function importJson(str: string): SaveGame {
-  const sv = migrate(JSON.parse(str) as SaveGame);
-  if (!validate(sv)) throw new Error('INVALID_SAVE');
-  return sv;
+  let sv: SaveGame;
+  try {
+    sv = JSON.parse(str) as SaveGame;
+  } catch {
+    throw new Error('INVALID_SAVE'); // 非 JSON：统一口径（浏览器原生 SyntaxError 文案不可控）
+  }
+  const out = migrate(sv);
+  if (!validate(out)) throw new Error('INVALID_SAVE');
+  return out;
 }

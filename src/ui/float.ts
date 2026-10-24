@@ -10,12 +10,14 @@ interface FloatItem {
 
 let layer: HTMLElement | null = null;
 let activeCount = 0;
+let sessionGen = 0; // 会话代数：换层绑定后旧定时器回调即作废（不再把新会话计数减成负数）
 const pending: FloatItem[] = [];
 
 /** 游戏屏挂载时绑定漂浮层容器 */
 export function bindFloatLayer(el: HTMLElement | null): void {
   layer = el;
   activeCount = 0;
+  sessionGen += 1;
   pending.length = 0;
 }
 
@@ -38,6 +40,7 @@ function clsToColor(cls: string): string {
 
 function spawn(item: FloatItem): void {
   if (!layer) return;
+  const gen = sessionGen;
   activeCount += 1;
   const tag = document.createElement('span');
   tag.className = `float-tag ${item.cls}`;
@@ -49,6 +52,7 @@ function spawn(item: FloatItem): void {
   layer.appendChild(tag);
   window.setTimeout(() => {
     tag.remove();
+    if (gen !== sessionGen) return; // 换层后旧回调作废：不动新会话的计数与队列
     activeCount -= 1;
     const next = pending.shift();
     if (next) spawn(next);

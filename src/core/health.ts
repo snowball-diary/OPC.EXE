@@ -80,13 +80,15 @@ export function driftDay(s: StateSlice, dayType: DayType): string[] {
 /**
  * 扩展日 +8（工作狂减半）/ AP 耗尽仍行动 +6/次 / 睡眠<20 过夜 +10 / 最低日或深度休息 -15。
  * 工作狂正向积累 ×1.25（隐性疲劳积累更快）。钳 0-100。
+ * 硬撑 +6 在 executeAction 即时落账，此处按「超限次数 − 当日已硬撑次数（flags.todayHardPress，
+ * executeAction 记账 / advanceDay 日清零）」补差——否则同一笔硬撑被双计。
  */
 export function tickHiddenFatigue(s: StateSlice, dayType: DayType, actionsTaken: number): void {
   let d = 0;
   let ext = 0;
   if (dayType === 'extended') ext = s.flags.workaholic === true ? 4 : 8; // 工作狂扩展日惩罚减半（不参与下方 ×1.25）
   const cap = apMaxFor(dayType, s);
-  if (actionsTaken > cap) d += 6 * (actionsTaken - cap);
+  if (actionsTaken > cap) d += 6 * Math.max(0, actionsTaken - cap - num(s.flags.todayHardPress));
   if (s.health.sleep.v < 20) d += 10;
   if (dayType === 'minimum' || s.flags.deepRestedToday === true) d -= 15;
   if (d > 0 && s.flags.workaholic === true) d = Math.round(d * 1.25); // 工作狂其余路径积累更快
@@ -97,12 +99,12 @@ export function tickHiddenFatigue(s: StateSlice, dayType: DayType, actionsTaken:
 
 /**
  * 进入 S1：energy≤40 或 stress≥60；stress≥85 → system1Deep。
- * 退出：energy≥55 且 stress<45 且距上次模式切换 ≥1 天（滞回防抖，切换日记入 flags.modeChangeDay）。
+ * 退出：energy≥55 且 stress<45（阈值差本身即滞回防抖）。
+ * （原「距上次模式切换 ≥1 天」的 modeChangeDay/gapOk 防抖恒真：本函数每日至多被 advanceDay 调用一次
+ *  且日号必然 +1，gap 恒 ≥1，等于没防——连同 prevMode 死写入一并删除，只留阈值滞回。）
  */
 export function updateDecisionMode(s: StateSlice): void {
   const prev = s.decisionMode;
-  const lastChange = num(s.flags.modeChangeDay);
-  const gapOk = s.meta.day - lastChange >= 1;
   const deep = s.stress >= 85;
   const enter = s.energy <= 40 || s.stress >= 60;
   let next = prev;
@@ -112,11 +114,9 @@ export function updateDecisionMode(s: StateSlice): void {
   } else {
     if (deep) next = 'system1Deep';
     else if (prev === 'system1Deep') next = 'system1'; // 压力回落：先降级回 S1
-    else if (s.energy >= 55 && s.stress < 45 && gapOk) next = 'system2';
+    else if (s.energy >= 55 && s.stress < 45) next = 'system2';
   }
-  if (next !== prev) s.flags.modeChangeDay = s.meta.day;
   if (prev === 'system2' && next !== 'system2') grantKp(s, 'system1'); // 首次跌落 System1 → 词条投递
-  s.flags.prevMode = prev === 'system2' ? 0 : prev === 'system1' ? 1 : 2;
   s.decisionMode = next;
   s.flags.s1DeepDays = next === 'system1Deep' ? num(s.flags.s1DeepDays) + 1 : 0;
 }

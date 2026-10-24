@@ -109,10 +109,11 @@ export function applyInvest(s: StateSlice, a: Extract<Action, { t: 'invest' }>):
   const done = (msg: string): ActionResult => ({ ok: true, msg, floatTexts: [{ text: msg, cls: 'gold' }] });
   if (a.kind === 'repay') {
     if (amt <= 0 || s.cash < amt) return { ok: false, msg: '现金不足，无法还款' };
-    s.cash -= amt;
-    s.debt = Math.max(0, s.debt - amt);
+    const pay = Math.min(amt, s.debt); // 超额不收：debt 钳零后多余现金不蒸发
+    s.cash -= pay;
+    s.debt = Math.max(0, s.debt - pay);
     s.creditScore = Math.min(1000, s.creditScore + 2);
-    return done(`还款 ¥${amt}：信用+2`);
+    return done(`还款 ¥${pay}：信用+2`);
   }
   if (a.kind === 'funding') {
     if (s.creditScore < 400) return { ok: false, msg: '信用分不足 400，借不到钱' };
@@ -176,18 +177,20 @@ export function settleMonth(s: StateSlice, rng: Rng, proj: MonthSettleInput): Mo
   const incomeService = num(s.flags.monthRevenueAcc); // 交付现金 + 平台日变现（发生时已入账）
   const investRealized = s.investGains.realizedMonth; // 已实现（卖出落袋，现金已在卖出时入账）
   const investFloat = s.investGains.floatMonth; // 本月浮动（未落袋，报表单列）
-  const totalIncome = incomeProject + incomeService + Math.max(0, investRealized);
+  const totalIncome = incomeProject + incomeService + investRealized; // realized 可为负：亏损须冲减利润（与税基口径一致）
 
   const dailySpent = num(s.flags.monthExpenseAcc); // 每日生活费+订阅（发生时已入账扣减）
   const fee = bookkeepingFee(s);
   const upkeep = s.osRules.reduce((a, r) => a + (findPatch(r.id)?.upkeep ?? 0), 0);
   const token = s.tokenBill.monthToDate; // 已逐日扣现，此处只报表汇总
-  const monthlyCharges = fee + upkeep + proj.projectUpkeep; // 此刻统一扣（Token 不再月扣）
+  const monthlyCharges = fee + upkeep + proj.projectUpkeep; // 损益/税基口径（projectUpkeep 现金已扣，见下）
   const totalExpense = dailySpent + token + monthlyCharges;
   const profit = totalIncome - totalExpense;
 
   const { tax, gray } = taxDue(s, profit);
-  s.cash -= monthlyCharges + tax;
+  // projectUpkeep 已由 settleProjectsMonth 扣现（契约见 MonthSettleInput 注释），此处只补代账+OS 维护+税
+  s.cash -= fee + upkeep + tax;
+  s.dailyFlow.otherOut += fee + upkeep + tax; // 月结发生在当天日流水清零之前，同口径补记「其他流出」
   s.flags.grayTaxMonth = gray;
   if (gray) s.compliance = Math.max(0, s.compliance - 2);
 

@@ -107,15 +107,15 @@ describe('健康：composeHealth / healthMult / driftDay', () => {
 });
 
 describe('决策模式滞回（§5.2）', () => {
-  it('进入 S1；退出需 energy≥55 且 stress<45 且间隔≥1 天', () => {
+  it('进入 S1；退出需 energy≥55 且 stress<45（阈值差滞回；原「间隔≥1 天」防抖恒真已删）', () => {
     const s = fresh();
     s.energy = 30;
     updateDecisionMode(s);
     expect(s.decisionMode).toBe('system1');
-    s.energy = 70; s.stress = 10;
-    updateDecisionMode(s); // 同日：滞回锁死
+    s.energy = 50; s.stress = 10; // energy 未达退出阈值 55：滞回锁死
+    updateDecisionMode(s);
     expect(s.decisionMode).toBe('system1');
-    s.meta.day += 1;
+    s.energy = 70; s.stress = 10;
     updateDecisionMode(s);
     expect(s.decisionMode).toBe('system2');
   });

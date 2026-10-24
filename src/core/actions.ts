@@ -4,7 +4,7 @@ import { findLocation } from '../data/locations.def';
 import { agentBizMult, weekStatsOf } from './agents';
 import { healthMult, num } from './health';
 import { patchMult } from './os';
-import { publishContent } from './platforms';
+import { publishContent, ensureAccount } from './platforms';
 import { clampAll, pushLog } from './state';
 import type { Rng } from './rng';
 import type {
@@ -76,7 +76,11 @@ export function applyEffects(s: StateSlice, effects: readonly Effect[], ctx: Eff
       continue;
     }
     if (k.startsWith('followers.')) {
-      const pid = k.slice(10);
+      const key = k.slice(10);
+      // 'followers.main' 为主平台别名：解析粉丝最多账号（违规惩罚/事故语义，不写死平台）；
+      // 无任何账号时回退 flags.mainPlatform（若记录过），再无则静默跳过（否则 ensurePlatform 会凭空开号）
+      const pid = key === 'main' ? resolveMainPlatformId(s) : key;
+      if (!pid) continue;
       const acc = ensurePlatform(s, pid);
       acc.followers = Math.max(0, e.op === '=' ? raw : acc.followers + Math.round(raw * mult));
       s.stats.followersPeak = Math.max(s.stats.followersPeak, acc.followers);
@@ -168,6 +172,17 @@ function ensurePlatform(s: StateSlice, pid: string): PlatformAccount {
   return acc;
 }
 
+/**
+ * 主平台解析（followers.main 别名落点）：粉丝最多的账号（无封禁过滤——惩罚语义下封禁号也该承担掉粉，
+ * 与 pickPlatformId 的发布口径不同）；无任何账号时回退 flags.mainPlatform 记录值，再无则返回 null（调用方静默跳过）。
+ */
+function resolveMainPlatformId(s: StateSlice): string | null {
+  const top = Object.entries(s.platforms).sort((a, b) => (b[1]?.followers ?? 0) - (a[1]?.followers ?? 0))[0]?.[0];
+  if (top) return top;
+  const recorded = s.flags.mainPlatform;
+  return typeof recorded === 'string' && recorded ? recorded : null;
+}
+
 // ---------- 技能升级 ----------
 
 const EXP_THRESHOLDS = [50, 120, 260, 480];
@@ -189,7 +204,7 @@ export function checkSkillUp(s: StateSlice, dim: SkillDim): boolean {
 }
 
 const SKILL_NAMES: Record<SkillDim, string> = { craft: '造物', expression: '表达', marketing: '营销', operation: '运营', business: '商业' };
-const LEVEL_NAMES = ['能模仿', '能独立完成', '能稳定交付', '能改进和教别人', '能改进和教别人'] as const;
+const LEVEL_NAMES = ['能模仿', '能独立完成', '能稳定交付', '能改进', '能改进和教别人'] as const;
 
 // ---------- special 分支 ----------
 
@@ -280,7 +295,9 @@ function runSpecial(s: StateSlice, def: NonNullable<ReturnType<typeof findAction
     }
     case 'publishContent': {
       // 选定主平台优先（一鱼八吃源头即首发平台）；未选则回退粉丝最多平台
+      // 账号开通收进引擎：UI 直调 ensureAccount 曾在 dispatch 失败时留下凭空账号（不回滚）
       const pid = platformId ?? pickPlatformId(s);
+      ensureAccount(s, pid);
       const r = publishContent(s, pid, rng);
       s.stats.contentPublished += 1;
       const dim = def.skill ?? 'expression';
@@ -485,6 +502,9 @@ export function executeAction(
   if (def.special === 'registerEntity' && def.id === 'registerOPC' && s.entity === 'opc') {
     return { ok: false, msg: '已注册一人有限公司' };
   }
+  if (def.special === 'registerEntity' && def.id === 'registerSole' && s.entity === 'sole') {
+    return { ok: false, msg: '已是个体户，无需重复注册' };
+  }
 
   // --- 硬撑判定（先于扣费：energy≤5 仍执行非恢复行动） ---
   const hardEnergy = s.energy <= 5 && nonRecovery;
@@ -492,6 +512,7 @@ export function executeAction(
   // --- 扣费 ---
   s.cash -= cost;
   s.flags.weekCashDelta = num(s.flags.weekCashDelta) - cost;
+  s.dailyFlow.otherOut += cost; // 今日净流分项与现金扣减同口径（财务 Tab「其他流出」对得上账）
   s.energy = clamp100(s.energy - def.energy);
   s.ap = Math.max(0, s.ap - def.ap);
 
@@ -500,6 +521,7 @@ export function executeAction(
     s.health.hiddenFatigue = clamp100(s.health.hiddenFatigue + 6);
     s.flags.hardPressedToday = true;
     s.flags.weekHardPress = num(s.flags.weekHardPress) + 1;
+    s.flags.todayHardPress = num(s.flags.todayHardPress) + 1; // 当日已硬撑次数：tickHiddenFatigue 据此扣减，防 +6 双计
     pushLog(s, '硬撑：AP 已经见底还在干，隐性疲劳+6', 'bad');
   }
   if (hardEnergy) {

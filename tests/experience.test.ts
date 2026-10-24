@@ -385,8 +385,9 @@ describe('[体感] 拟人局 × 3 × 90 天：四条作者意见回归', () => {
       expect(vals.length, `${t.spec.name} 应有逐日净流记录`).toBeGreaterThanOrEqual(t.endDay - 1);
       const distinct = new Set(vals.map(v => Math.round(v)));
       expect(distinct.size, `${t.spec.name} 净流值过于单一（${[...distinct].slice(0, 5)}）——反馈失效`).toBeGreaterThanOrEqual(15);
-      // 月结日志：90 天内至少 2 次（30/60 天，90 天当晚日志属下一日戳不强制）
-      expect(t.sawMonthSettle.length, `${t.spec.name} 月结对账日志不足（${t.sawMonthSettle}）`).toBeGreaterThanOrEqual(2);
+      // 月结日志：90 天内至少 2 次（30/60 天，90 天当晚日志属下一日戳不强制）；
+      // 提前落幕的局按活过的月界放宽（followers.main 打靶修正+疲劳去双计后，B 局 54 天 secondLife 收官 → 只认 30 天那次）
+      expect(t.sawMonthSettle.length, `${t.spec.name} 月结对账日志不足（${t.sawMonthSettle}）`).toBeGreaterThanOrEqual(t.over ? 1 : 2);
     }
   });
 

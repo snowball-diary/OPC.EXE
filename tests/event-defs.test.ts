@@ -41,7 +41,7 @@ const OK_EFFECT_KEY = new RegExp(
   'autoLevel|tokenBill|tokenPriceIndex|contacts|attentionCap|assetAdd|' +
   'skillExp\\.(craft|expression|marketing|operation|business)|' +
   'deliveries\\.(craft|expression|marketing|operation|business)|' +
-  'followers\\.(bilili|wechat|xhs|zhihu|douyin|weibo|youtube|site)|' +
+  'followers\\.(main|bilili|wechat|xhs|zhihu|douyin|weibo|youtube|site)|' +
   'project(Progress|Quality|PmfTrue|PmfNoise|Users|Mrr|Maintenance)|' +
   'flag\\.[a-zA-Z][a-zA-Z0-9_-]*)$'
 );
@@ -237,7 +237,7 @@ describe('静态校验（真实数据全量）', () => {
         for (const e of c.effects as Effect[]) {
           expect(OK_EFFECT_KEY.test(e.k), `${d.id}/${c.id} 非法效果键：${e.k}`).toBe(true);
           expect(e.k, `${d.id}/${c.id} 禁用 energy 键`).not.toBe('energy');
-          if (e.k.startsWith('followers.')) {
+          if (e.k.startsWith('followers.') && e.k !== 'followers.main') {
             expect(platformIds.has(e.k.slice(10)), `${d.id} 未知平台：${e.k}`).toBe(true);
           }
         }

@@ -13,6 +13,8 @@ import {
   assertInvariants, createGame, createRng, resolveChoice,
   type Game, type Rng, type SetupConfig, type StateSlice
 } from '../src/core/index';
+import { distributeContent } from '../src/core/platforms';
+import { filterChoicesForUI } from '../src/core/events';
 import { monthlyTokenBill } from '../src/core/agents';
 import { AGENT_DEFS } from '../src/data/agents.def';
 import { PATCH_DEFS } from '../src/data/patches.def';
@@ -199,7 +201,12 @@ function playOne(spec: BotSpec, openingIdx: number, seed: number): RunStats {
       const def = findEventDef(id);
       if (!def || def.choices.length === 0) continue;
       if (!HEARTBEAT_EVENTS.has(id)) eventFired.set(id, (eventFired.get(id) ?? 0) + 1);
-      resolveChoice(s, def, pickChoiceIdx(spec, def), evRng);
+      // 与实机弹窗同口径：bot 只能选到 filterChoicesForUI 过滤后仍可见的选项
+      const visible = filterChoicesForUI(s, def);
+      if (visible.length === 0) continue;
+      const pickIdx = pickChoiceIdx(spec, def);
+      const realIdx = def.choices.findIndex(c => c.id === visible[pickIdx < visible.length ? pickIdx : 0]?.id);
+      resolveChoice(s, def, realIdx >= 0 ? realIdx : pickIdx, evRng);
     }
   };
 
@@ -437,7 +444,12 @@ function botAct(g: Game, spec: BotSpec, rng: Rng): void {
   }
   const choice = pickW(rng, list);
   if (!choice) return;
-  g.dispatch({ t: 'act', ...choice });
+  const r = g.dispatch({ t: 'act', ...choice });
+  // 与实机对齐：实机每次内容发布后向其余平台一鱼八吃瀑布（engine publishContent 后 UI 调
+  // game.distributeFromPlatform）；sim 此前漏掉该步，系统性低估粉丝/收入/封号风险曲线
+  if (choice.id === 'writeContent' && r.ok && choice.platformId) {
+    distributeContent(s, choice.platformId, rng);
+  }
 }
 
 // ---------- 汇总与报告 ----------
@@ -463,7 +475,7 @@ function buildReport(all: RunStats[], elapsedMs: number): string {
   const lines: string[] = [];
   lines.push('# OPC.exe 平衡模拟报告');
   lines.push('');
-  lines.push(`- 生成：2026-09-27 · ${BOTS.length} bot × ${OPENINGS.length} 开局 × ${SEEDS_PER_OPENING} 种子 = ${total} 局 · 720 天上限`);
+  lines.push(`- 生成：${new Date().toISOString().slice(0, 10)} · ${BOTS.length} bot × ${OPENINGS.length} 开局 × ${SEEDS_PER_OPENING} 种子 = ${total} 局 · 720 天上限`);
   lines.push(`- 引擎：纯 core 无头跑（与 soak 同口径）· 总耗时 ${Math.round(elapsedMs / 1000)}s · 异常计数 ${all.reduce((a, r) => a + r.anomalies, 0)}`);
   lines.push('');
   // ---- 全体结局分布 vs 目标 ----

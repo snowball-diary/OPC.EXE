@@ -11,17 +11,29 @@ import { serialize } from '../save/save';
 import { executeAction } from './actions';
 import { applyInvest, num, recalcLiving } from './economy';
 import { apMaxFor } from './health';
+import { chooseEnding, triggerActiveEnding } from './endings';
 import { installPatch } from './os';
 import { createProject, pivotProject, retireProject } from './projects';
 import { fireAgent, hireAgent } from './agents';
-import { ensureAccount } from './platforms';
+import { distributeContent, ensureAccount } from './platforms';
 import { advanceDay as advanceDayImpl, BOTTLENECK_LABELS } from './time';
+import { resolveChoice } from './events';
+import type { ChoiceResult, EventDef } from './types';
+import type { DistributeResult } from './platforms';
 
 export interface Game {
   state: Readonly<StateSlice>;
   dispatch(a: Action): ActionResult;
   advanceDay(): DayReport;
   serialize(): SaveGame;
+  /** 事件选项结算：固定走引擎 rng 并回写 seedState（UI 禁止直调 core 版注入视觉 rng） */
+  resolveEventChoice(ev: EventDef, choiceIdx: number): ChoiceResult;
+  /** 内容瀑布分发：同上 */
+  distributeFromPlatform(platformId: string): DistributeResult;
+  /** 主动结局回头（「继续经营」）：chooseEnding 清场（over/endingKey/触发 flag/过劳计数）+ 簿记回写。false=结局 key 不存在 */
+  resumeFromEnding(key: string): boolean;
+  /** 主动结局触发：置 endings.def 约定 flag → checkPassiveEndings 烈度优先级命中 → applyEnding 记账 + 簿记回写。返回落地结局 key（null=未命中） */
+  triggerEnding(flag: string, key: string): string | null;
 }
 
 function route(s: StateSlice, a: Action, rng: Rng): ActionResult {
@@ -39,6 +51,7 @@ function route(s: StateSlice, a: Action, rng: Rng): ActionResult {
       const cost = Math.round(s.monthlyExpense * RELOCATE_MULT); // 迁居费 = 月生活费 × 2
       if (s.cash < cost) return { ok: false, msg: `迁居费不足（需 ¥${cost} = 月生活费×2）` };
       s.cash -= cost;
+      s.dailyFlow.otherOut += cost; // 今日净流分项与现金扣减同口径
       s.location = a.to;
       recalcLiving(s);
       s.health.mood.v = Math.min(100, s.health.mood.v + 5);
@@ -53,8 +66,7 @@ function route(s: StateSlice, a: Action, rng: Rng): ActionResult {
       if (!(a.id in BOTTLENECK_LABELS)) {
         return { ok: false, msg: '焦点须为：健康/现金流/获客/交付/技能/合规' };
       }
-      s.focus = a.id;
-      s.flags.weekFocus = 1;
+      s.focus = a.id; // 是否在焦点周内由 s.focus 非空即知（周结不清理，dispatch focus 覆盖即换）——weekFocus 死写入已删
       return { ok: true, msg: `本周主焦点：${BOTTLENECK_LABELS[a.id as keyof typeof BOTTLENECK_LABELS]}（该类行动+15%，其余-10%）` };
     }
     case 'dayType': {
@@ -100,6 +112,31 @@ function makeGame(state: StateSlice, rng: Rng): Game {
       state.meta.seedState = rng.getState(); // 同上
       return rep;
     },
+    resolveEventChoice(ev: EventDef, choiceIdx: number): ChoiceResult {
+      const r = resolveChoice(state, ev, choiceIdx, rng);
+      clampAll(state);
+      state.meta.seedState = rng.getState();
+      return r;
+    },
+    distributeFromPlatform(platformId: string): DistributeResult {
+      const r = distributeContent(state, platformId, rng);
+      clampAll(state);
+      state.meta.seedState = rng.getState();
+      return r;
+    },
+    resumeFromEnding(key: string): boolean {
+      const ok = chooseEnding(state, key);
+      if (!ok) return false;
+      clampAll(state);
+      state.meta.seedState = rng.getState(); // 与 dispatch 同口径：回头后的 rng 状态落切片
+      return true;
+    },
+    triggerEnding(flag: string, key: string): string | null {
+      const applied = triggerActiveEnding(state, flag, key);
+      clampAll(state);
+      state.meta.seedState = rng.getState();
+      return applied;
+    },
     serialize(): SaveGame {
       return serialize(state);
     }
@@ -116,6 +153,10 @@ function withDefaults(s: StateSlice): StateSlice {
   if (typeof s.rep !== 'number') s.rep = 0;
   if (!s.meta.difficulty) s.meta.difficulty = 'normal';
   if (!s.flags) s.flags = {};
+  // 缺 seedState 的历史档：loadGame 的 createRng(undefined.s) 会静默重置到 0 号流——补非零兜底
+  if (!s.meta.seedState || typeof s.meta.seedState.s !== 'number') {
+    s.meta.seedState = { s: (s.meta.day > 0 ? s.meta.day * 2654435761 : 1) >>> 0 || 1 };
+  }
   if (!s.stats.endingsSeen) s.stats.endingsSeen = [];
   if (typeof s.stats.leads !== 'number') s.stats.leads = 0;
   // tokenBill：lastMonth → { yesterday, monthToDate }（旧值并入本月累计）
@@ -151,7 +192,7 @@ export {
 export { createProject, pivotProject, retireProject, settleProjectsDay, settleProjectsMonth, tickProjectsDay } from './projects';
 export { installPatch, patchMult, tickPatchesDay } from './os';
 export { dailyNet, livingCost, phaseMult, recalcLiving, rollPhase, settleMonth, taxDue, tickPortfolioDay } from './economy';
-export { buildReport, checkPassiveEndings } from './endings';
+export { buildReport, checkPassiveEndings, chooseEnding, triggerActiveEnding } from './endings';
 export { weeklyReview, BOTTLENECK_LABELS } from './time';
 export {
   enqueueEvent, evalCond, filterChoicesForUI, resolveChoice, resolveEvent,

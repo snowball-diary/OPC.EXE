@@ -1,2 +1,5 @@
 node_modules/
 dist/
+
+# EdgeOne CLI 本地状态
+.edgeone/

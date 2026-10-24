@@ -93,6 +93,13 @@ export function weeklyReview(s: StateSlice): WeeklyReviewResult {
 const STAGE_VER: Record<number, string> = { 2: 'v0.2 求生', 3: 'v0.5 立定', 4: 'v1.0 成长', 5: 'v2.0 自由', 6: 'v3.0 传承' };
 const STAGE_CAPS: Record<number, number> = { 1: 1, 2: 1, 3: 3, 4: 4, 5: 5, 6: 5 };
 
+/**
+ * 阶段推进条件口径（周结/月结各判一次，逐档判定满足即停）：
+ *   1→2 首笔收入；2→3 月收支转正；3→4 月收入 ≥3 万；
+ *   4→5 自由：被动收入 ≥ 月支出（上月口径 flags.lastPassiveIncome，settleMonth 写入）且 >0；
+ *   5→6 传承（v3.0）：被动收入 ≥2× 月支出 且 现金 ≥20 万——与 stage4 条件自然衔接、可达成但需经营。
+ * （修复：此前只判到 4→5，v3.0 传承永远不可达。）
+ */
 function checkStageUp(s: StateSlice, track: (msg: string, cls?: LogEntry['cls']) => void): void {
   const tryUp = (cond: boolean): boolean => {
     if (!cond || s.meta.stage >= 6) return false;
@@ -101,11 +108,11 @@ function checkStageUp(s: StateSlice, track: (msg: string, cls?: LogEntry['cls'])
     track(`阶段提升：OS ${STAGE_VER[s.meta.stage] ?? s.meta.stage}——新的面板解锁了。`, 'gold');
     return true;
   };
-  // 逐档判定（满足即停）
   if (s.meta.stage === 1) tryUp(s.stats.totalRevenue > 0);
   if (s.meta.stage === 2) tryUp(s.monthlyIncome > 0 && s.monthlyIncome >= s.monthlyExpense);
   if (s.meta.stage === 3) tryUp(s.monthlyIncome >= 30000);
   if (s.meta.stage === 4) tryUp(num(s.flags.lastPassiveIncome) >= s.monthlyExpense && num(s.flags.lastPassiveIncome) > 0);
+  if (s.meta.stage === 5) tryUp(num(s.flags.lastPassiveIncome) >= s.monthlyExpense * 2 && s.cash >= 200000);
 }
 
 // ---------- 11 步日流水线 ----------
@@ -177,7 +184,7 @@ export function advanceDay(s: StateSlice, rng: Rng): DayReport {
       s.flags.forcedMinDays = 3;
       grantKp(s, 'recovery'); // 恢复三线首次进入中断 → 词条投递
       track('波动→中断：身心报警，项目停摆几日。不羞辱失败，但代价是真的。', 'bad');
-      const ev = enqueueEvent(s, 'recovery-interrupt', 'forced', { cooldownDays: 10 });
+      const ev = enqueueEvent(s, 'recovery-interrupt', 'forced', { cooldownDays: 14 }); // 与 events.def.cooldownDays 对齐（10→14，sim 实证调参）
       if (ev) events.push(ev);
     }
   } else if (s.flags.interrupted !== true) {
@@ -294,6 +301,7 @@ export function advanceDay(s: StateSlice, rng: Rng): DayReport {
   // 清当日行为记账
   s.flags.actsToday = 0;
   s.flags.actsSelf = 0;
+  s.flags.todayHardPress = 0; // 当日硬撑次数（tickHiddenFatigue 去双计用）与其它日记账同点清零
   s.flags.deepRestedToday = false;
   s.flags.hardPressedToday = false;
   s.flags.learnedToday = false;

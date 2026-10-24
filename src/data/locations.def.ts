@@ -1,5 +1,5 @@
 // 地理 8 地
-// costMult：月生活费系数（月生活费 = 1000 × costMult × 难度 livingCostMult）
+// costMult：月生活费系数（月生活费 = LIVING_BASE 7000 × costMult × 难度 livingCostMult，economy.livingCost 统一口径）
 // creative/stress：创作类行动加成与每日压力修正（-10~+10），引擎 流水线取用
 import type { LocationDef } from '../core/types';
 
@@ -15,8 +15,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 1.35,
     timezone: 'UTC+8 · 通勤地狱',
     creative: 2,
-    stress: 5,
-    eventFlags: ['tier1_bigclient', 'tier1_rent_pressure']
+    stress: 5
   },
   {
     id: 'hangcheng',
@@ -29,8 +28,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 1.2,
     timezone: 'UTC+8 · 电商与直播生态',
     creative: 5,
-    stress: 2,
-    eventFlags: ['new1_ecom_boom', 'new1_livestream']
+    stress: 2
   },
   {
     id: 'guangshen',
@@ -43,8 +41,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 1.25,
     timezone: 'UTC+8 · 与制造业零距离',
     creative: 3,
-    stress: 4,
-    eventFlags: ['gba_cross_border', 'gba_supply_chain']
+    stress: 4
   },
   {
     id: 'changwu',
@@ -57,8 +54,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 0.95,
     timezone: 'UTC+8 · 不夜城节奏',
     creative: 4,
-    stress: -2,
-    eventFlags: ['changwu_evening_economy']
+    stress: -2
   },
   {
     id: 'hometown',
@@ -71,8 +67,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 0.6,
     timezone: 'UTC+8 · 早睡早起',
     creative: 0,
-    stress: -6,
-    eventFlags: ['hometown_gossip', 'family_dinner']
+    stress: -6
   },
   {
     id: 'dali',
@@ -85,8 +80,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 0.7,
     timezone: 'UTC+8 · 面朝洱海',
     creative: 10,
-    stress: -8,
-    eventFlags: ['dali_nomad', 'dali_rain_season']
+    stress: -8
   },
   {
     id: 'singapore',
@@ -99,8 +93,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 1.3,
     timezone: 'UTC+8 · 出海跳板',
     creative: 1,
-    stress: 4,
-    eventFlags: ['sg_outbound', 'sg_compliance']
+    stress: 4
   },
   {
     id: 'nomad',
@@ -113,8 +106,7 @@ export const LOCATION_DEFS: LocationDef[] = [
     marketMult: 0.9,
     timezone: '漂移 · UTC+0 ~ +8',
     creative: 8,
-    stress: 3,
-    eventFlags: ['nomad_visa_run', 'nomad_loneliness']
+    stress: 3
   }
 ];
 

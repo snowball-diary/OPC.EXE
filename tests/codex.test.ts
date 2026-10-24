@@ -1,4 +1,4 @@
-// 图鉴与成就测试：知识点词条（数量/来源/长度/键唯一）/ 老张台词池（四戒·≤40 字·每景≥2·pickZhang）/
+// 图鉴与成就测试：知识点词条（数量/来源/长度/键唯一）/
 // 成就系统（24 条 check 纯函数可执行 / firstOrder 幂等解锁 / advanceDay 接线日志 / 图鉴成就）/ suddenDeath 时代锚点
 import { describe, expect, it } from 'vitest';
 import { createInitialSlice } from '../src/core/state';
@@ -6,7 +6,6 @@ import { createRng } from '../src/core/rng';
 import { advanceDay } from '../src/core/time';
 import { achCount, checkAchievements } from '../src/core/achievements';
 import { KP, KP_DEFS } from '../src/data/kp.def';
-import { pickZhang, ZHANG_LINES, type ZhangSituation } from '../src/data/zhang.def';
 import { ACHIEVEMENT_DEFS } from '../src/data/achievements.def';
 import { ENDING_DEFS } from '../src/data/endings.def';
 import type { SetupConfig, StateSlice } from '../src/core/types';
@@ -35,11 +34,6 @@ function chaos(): StateSlice {
   s.log.push({ day: 2, msg: '老张：「又是扩展日。」', cls: 'purple' });
   return s;
 }
-
-const ZHANG_SITUATIONS: ZhangSituation[] = [
-  'overwork', 'heartAttack', 'suddenDeath', 'bankrupt',
-  'moralChoice', 'burnoutEnd', 'platformBan', 'grayTemptation'
-];
 
 // ============================================================
 // 一、知识点词条 KP
@@ -80,38 +74,7 @@ describe('kp.def：知识点词条（可溯源）', () => {
 });
 
 // ============================================================
-// 二、老张台词池
-// ============================================================
-
-describe('zhang.def：老张台词池（四戒）', () => {
-  it('≥15 条，每个 situation ≥2', () => {
-    expect(ZHANG_LINES.length).toBeGreaterThanOrEqual(15);
-    for (const sit of ZHANG_SITUATIONS) {
-      const n = ZHANG_LINES.filter(l => l.situation === sit).length;
-      expect(n, `${sit} 仅 ${n} 条`).toBeGreaterThanOrEqual(2);
-    }
-  });
-
-  it('逐条长度 ≤40 字（四戒硬约束）', () => {
-    for (const l of ZHANG_LINES) {
-      expect(Array.from(l.text).length, `${l.situation}: ${l.text}（${Array.from(l.text).length} 字）`).toBeLessThanOrEqual(40);
-    }
-  });
-
-  it('pickZhang：每个 situation 抽得到非空台词，且属于该 situation 的池', () => {
-    for (const sit of ZHANG_SITUATIONS) {
-      const pool = ZHANG_LINES.filter(l => l.situation === sit).map(l => l.text);
-      for (let seed = 1; seed <= 20; seed++) {
-        const line = pickZhang(sit, createRng(seed));
-        expect(line.length).toBeGreaterThan(0);
-        expect(pool).toContain(line);
-      }
-    }
-  });
-});
-
-// ============================================================
-// 三、成就系统
+// 二、成就系统
 // ============================================================
 
 describe('achievements.def：24 条 check 全部可执行（纯函数不抛异常）', () => {
@@ -170,7 +133,7 @@ describe('achievements.def：24 条 check 全部可执行（纯函数不抛异�
 });
 
 // ============================================================
-// 四、一致性：suddenDeath 时代锚点
+// 三、一致性：suddenDeath 时代锚点
 // ============================================================
 
 describe('endings.def：时代锚点巡检', () => {

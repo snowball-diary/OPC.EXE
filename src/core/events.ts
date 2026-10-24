@@ -43,7 +43,7 @@ export function evalCond(s: StateSlice, c: Cond, rng?: Rng): boolean {
     case 'and': return c[1].every(x => evalCond(s, x, rng));
     case 'or': return c[1].some(x => evalCond(s, x, rng));
     case 'not': return !evalCond(s, c[1], rng);
-    case 'random': return rng ? rng.chance(c[2]) : Math.random() < c[2];
+    case 'random': return rng ? rng.chance(c[2]) : false; // 缺 rng 时 fail-closed：不以 Math.random 破坏确定性
     case 'day': return s.meta.day >= c[2];
     case 'monthPhase': return s.economyPhase === c[1];
     default: return false;
@@ -299,7 +299,7 @@ export function validateWhenReachable(defs: EventDef[]): string[] {
 /** 事件 → 知识点词条投递表：事件首次入队时把对应 KP 压入 pending.kpQueue（UI 弹窗消费） */
 const KP_BY_EVENT: Record<string, string> = {
   heartAttackWarn: 'hiddenFatigue',
-  'heart-attack': 'fireLine',
+  'heart-attack': 'health',
   aiUndeclared: 'aiDeclare',
   'token-burn-warning': 'tokenEcon',
   'moon-three': 'pmf',

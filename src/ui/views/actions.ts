@@ -3,12 +3,11 @@
 // + 经营组实体状态条（主体/商标/ICP/定价）。
 import type { UiCtx } from '../registry';
 import { registerView } from '../registry';
-import { distributeContent, ensureAccount } from '../../core/platforms';
 import type { ActionDef, StateSlice } from '../../core/types';
 import { ACTION_DEFS } from '../../data/actions.def';
 import { PLATFORM_DEFS } from '../../data/platforms.def';
 import { escapeHtml, yuan } from '../fmt';
-import { getRng } from '../runtime';
+import { getGame } from '../runtime';
 import { SFX } from '../sfx';
 
 // ---------- 纯函数（tests/views.test.ts 覆盖） ----------
@@ -144,11 +143,12 @@ function openPlatformPicker(ctx: UiCtx): void {
       const pid = b.dataset.plat ?? '';
       overlay.remove();
       // 修「瀑布源头不涨粉」：选定的主阵地即官方管线首发平台（Action.platformId），
-      // 之后一鱼八吃向其余平台瀑布分发——源头平台自己吃到大爆抽样，不再是只出不进的纯管道
-      ensureAccount(ctx.state, pid);
+      // 之后一鱼八吃向其余平台瀑布分发——源头平台自己吃到大爆抽样，不再是只出不进的纯管道。
+      // 账号开通与瀑布分发都收进引擎（publishContent case 内 ensureAccount；game.distributeFromPlatform
+      // 走引擎 rng 并回写 seedState）——UI 不再直写 core 状态、不再注入视觉 rng。
       const r = ctx.dispatch({ t: 'act', id: 'writeContent', platformId: pid });
       if (r.ok) {
-        distributeContent(ctx.state, pid, getRng()); // 一鱼八吃瀑布（源头除外，其余 7 平台）
+        getGame()?.distributeFromPlatform(pid);
         ctx.rerender(); // 瀑布结果（延迟链/日志）落到界面
       }
     });

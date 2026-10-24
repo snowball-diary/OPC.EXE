@@ -224,6 +224,7 @@ export type EffectKey =
   | `skillLevel.${SkillDim}`
   | `deliveries.${SkillDim}`
   | `followers.${PlatformId}`
+  | 'followers.main' // 主平台别名：applyEffects 运行时解析为粉丝最多账号（违规惩罚/事故语义用，避免写死平台打错靶）
   | 'rep' | 'influence' | 'power' | 'compliance' | 'creditScore' | 'morality'
   | 'projectProgress' | 'projectQuality' | 'projectPmfTrue' | 'projectPmfNoise'
   | 'projectUsers' | 'projectMrr' | 'projectMaintenance'
@@ -330,7 +331,6 @@ export interface ActionDef {
   cash?: number;
   minStage?: Stage;
   needsProject?: boolean;
-  cond?: Cond[];
   special?: ActionSpecial;
   domain?: string; // 行动域：AgentDef.replaces 按此接管
   skill?: SkillDim; // 学习/交付对应的技能维
@@ -480,7 +480,6 @@ export interface LocationDef {
   timezone: string;
   creative: number; // 创作类行动加成（-10~+10）
   stress: number; // 每日压力修正（-10~+10）
-  eventFlags: string[]; // 专署事件 flag
 }
 
 export interface DifficultyDef {

@@ -118,7 +118,7 @@ export function createInitialSlice(setup: SetupConfig): StateSlice {
     if (isSkillDim(dim) && typeof lv === 'number') skills[dim] = Math.max(skills[dim], lv) as SkillLevel;
   }
 
-  // 现金 = 背景基数 × 难度倍率；月生活费 = LIVING_BASE(8000) × 地点系数 × 难度系数（按月扣，日折算=/30）
+  // 现金 = 背景基数 × 难度倍率；月生活费 = LIVING_BASE(7000) × 地点系数 × 难度系数（按月扣，日折算=/30）
   const cash = Math.round(bg.baseCash * diff.cashMult);
 
   const s: StateSlice = {
